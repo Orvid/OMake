@@ -1,0 +1,5 @@
+﻿
+// Don't Cause the error
+#define PLATFORM(WINDOWS_X32);
+// And now cause the error.
+#define PLATFORMWINDOWS);

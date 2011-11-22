@@ -1,0 +1,21 @@
+﻿
+TODO:
+
+
+1. Allow the inclusion of other OMake files.
+
+2. Allow platform-specific source defines.
+
+3. Allow the defining of functions and the 
+   generation of files, such as headers, for
+   use in configuring the actual source code
+   in a cross platform build.
+   
+4. Create a standard library of functions and
+   platform aliases for inclusion. Try to do
+   this in a way that allows them to be directly
+   included in the OMake exe, as well as be 
+   able to load them from the filesystem.
+   
+6. Need to see if there is a way to speed up
+   the caching that the WildcardEvaluator does.

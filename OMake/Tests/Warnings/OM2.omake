@@ -1,0 +1,7 @@
+﻿
+// Define the base platform
+#define PLATFORM(WINDOWS_X32);
+// Don't cause the error
+#define PLATFORM_ALIAS(WINDOWS_X32, WINDOWS_32);
+// And now cause the error.
+#define PLATFORM_ALIAS(WINDOWS, WIN32);

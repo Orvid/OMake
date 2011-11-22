@@ -1,0 +1,5 @@
+﻿
+// Don't Cause the error
+#define TOOL(GCC, ./SomethingOrAnother);
+// And now cause the error.
+#define TOOL(GCC, ./SomethingOrAnother);
