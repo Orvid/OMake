@@ -68,10 +68,10 @@ namespace OMake
                     p.StartInfo = psi;
                     p.OutputDataReceived += (sender, args) => Console.WriteLine(args.Data);
                     p.ErrorDataReceived += (sender, args) => Console.WriteLine(args.Data);
-                    p.BeginOutputReadLine();
-                    p.BeginErrorReadLine(); 
                     Console.WriteLine("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments);
                     p.Start();
+                    p.BeginOutputReadLine();
+                    p.BeginErrorReadLine(); 
                     p.WaitForExit();
                 }
             }
