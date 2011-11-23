@@ -47,7 +47,7 @@ namespace OMake
             {
                 buf = stin.ReadLine();
                 file.LineNumber++;
-                if (buf != "")
+                if (buf.Trim() != "")
                 {
                     if (buf.ToLower().StartsWith("#define"))
                     {
