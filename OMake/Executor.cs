@@ -66,8 +66,8 @@ namespace OMake
                     psi.RedirectStandardError = true;
                     Process p = new Process();
                     p.StartInfo = psi;
-                    p.OutputDataReceived += (sender, args) => Console.Write(args.Data);
-                    p.ErrorDataReceived += (sender, args) => Console.Write(args.Data);
+                    p.OutputDataReceived += (sender, args) => { if (args.Data != null) Console.WriteLine(args.Data); };
+                    p.ErrorDataReceived += (sender, args) => { if (args.Data != null) Console.WriteLine(args.Data); };
                     Console.WriteLine("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments);
                     p.Start();
                     p.BeginOutputReadLine();
