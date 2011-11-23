@@ -56,6 +56,7 @@ namespace OMake
             foreach (string s in Config.Statements)
             {
                 string tool = s.Substring(0, s.IndexOf(' ')).Trim();
+                tool = Config.GetTool(platform, tool);
                 tool = Path.GetFullPath(tool);
                 ProcessStartInfo psi = new ProcessStartInfo(tool, s.Substring(s.IndexOf(' ')).Trim());
                 psi.CreateNoWindow = true;
