@@ -96,6 +96,7 @@ namespace OMake
                 }
                 if (CustomConstant_Regex.IsMatch(tmp))
                     goto BeforeResolve;
+            BeforeInnerListResolve:
                 // This has to be done after the custom 
                 // constants are replaced, otherwise it
                 // will include the constants in the match.
@@ -169,6 +170,8 @@ namespace OMake
                     tmp = tmp.Replace(InnerList_Regex.Match(tmp).Value, finalReplaced);
                     #endregion
                 }
+                if (InnerList_Regex.IsMatch(tmp))
+                    goto BeforeInnerListResolve;
                 newlist.Add(tmp);
             }
             Config.Statements = newlist;
