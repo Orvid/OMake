@@ -53,6 +53,12 @@ namespace OMake
         {
             FinalDecompisition(platform);
 
+            if (ErrorManager.ErrorCount > 0)
+            {
+                ErrorManager.Error(54, Processor.file);
+                return;
+            }
+
             foreach (string s in Config.Statements)
             {
                 if (s.Trim() != "")
@@ -73,6 +79,11 @@ namespace OMake
                     p.BeginOutputReadLine();
                     p.BeginErrorReadLine(); 
                     p.WaitForExit();
+                    if (p.ExitCode != 0)
+                    {
+                        ErrorManager.Error(53, Processor.file, p.ExitCode.ToString());
+                        return;
+                    }
                 }
             }
         }
