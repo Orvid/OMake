@@ -61,8 +61,16 @@ namespace OMake
                     tool = Config.GetTool(platform, tool);
                     tool = Path.GetFullPath(tool);
                     ProcessStartInfo psi = new ProcessStartInfo(tool, s.Substring(s.IndexOf(' ')).Trim());
-                    psi.CreateNoWindow = false;
-                    Process p = Process.Start(psi);
+                    psi.UseShellExecute = false;
+                    psi.RedirectStandardOutput = true;
+                    psi.RedirectStandardError = true;
+                    Process p = new Process();
+                    p.StartInfo = psi;
+                    p.OutputDataReceived += (sender, args) => Console.WriteLine(args.Data);
+                    p.ErrorDataReceived += (sender, args) => Console.WriteLine(args.Data);
+                    p.BeginOutputReadLine();
+                    p.BeginErrorReadLine();
+                    p.Start();
                     p.WaitForExit();
                 }
             }
