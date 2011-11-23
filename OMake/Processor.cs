@@ -101,7 +101,7 @@ namespace OMake
                 if (buf.StartsWith("("))
                 {
                     buf = buf.Substring(1).Trim();
-                    string baseCommand = buf.Substring(0, buf.LastIndexOf(')')).Trim();
+                    string baseCommand = buf.Substring(0, buf.LastIndexOf(')'));
                     buf = buf.Substring(buf.LastIndexOf(')') + 1).Trim();
                     if (buf.StartsWith(":"))
                     {
