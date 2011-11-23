@@ -71,7 +71,8 @@ namespace OMake
             {
                 string tmp = s;
                 string buf = "";
-                foreach (Match m in CustomConstant_Regex.Matches(s))
+            BeforeResolve:
+                foreach (Match m in CustomConstant_Regex.Matches(tmp))
                 {
                     #region Custom Constant
                     buf = m.Value.Substring(1).Trim();
@@ -81,6 +82,8 @@ namespace OMake
                     tmp = tmp.Replace(m.Value, Config.GetConstant(plat, buf));
                     #endregion
                 }
+                if (CustomConstant_Regex.IsMatch(tmp))
+                    goto BeforeResolve;
                 // This has to be done after the custom 
                 // constants are replaced, otherwise it
                 // will include the constants in the match.
