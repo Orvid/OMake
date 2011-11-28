@@ -1,5 +1,7 @@
-﻿using System;
+﻿#define UseLog // This causes the log to be used.
+using System;
 using System.IO;
+using System.Collections.Generic;
 
 namespace OMake
 {
@@ -7,35 +9,140 @@ namespace OMake
 	{
 		public static void Main(string[] args)
         {
-            System.Diagnostics.Stopwatch t = new System.Diagnostics.Stopwatch();
             StreamReader strm = null;
+            System.Diagnostics.Stopwatch t = new System.Diagnostics.Stopwatch();
+#if UseLog
             Log.Initialize();
-            string filename = "makefile.omake";
+#else
+            Log.Initialize_NoLog();
+#endif
+            string filename = "";
+            string platform = "";
+            List<string> targets = new List<string>();
 
             t.Start();
             #region Load Makefile
             if (args.Length > 0)
             {
-                if (File.Exists(args[0]))
+                #region We have arguments.
+                int i = 0;
+                string arg;
+                while (i < args.Length)
                 {
-                    filename = args[0];
-                    try
+                    arg = args[i];
+                    i++;
+                    if (arg.Trim() == "-f")
                     {
-                        strm = new StreamReader(args[0]);
+                        if (filename != "")
+                        {
+                            Console.WriteLine("Filename already specified!");
+                            return;
+                        }
+                        else
+                        {
+                            if (i >= args.Length)
+                            {
+                                Console.WriteLine("Expected filename after -f, but didn't get it!");
+                                return;
+                            }
+                            else
+                            {
+                                arg = args[i];
+                                i++;
+                                if (File.Exists(arg))
+                                {
+                                    filename = arg;
+                                    try
+                                    {
+                                        strm = new StreamReader(arg);
+                                    }
+                                    catch
+                                    {
+                                        Console.WriteLine("An error occurred when opening the file! '" + arg + "'");
+                                        return;
+                                    }
+                                }
+                                else
+                                {
+                                    Console.WriteLine("Couldn't find the file at '" + arg + "'! Perhaps you forgot to create it?");
+                                    return;
+                                }
+                            }
+                        }
                     }
-                    catch
+                    else if (arg.Trim() == "-p")
                     {
-                        Console.WriteLine("An error occurred when opening the file! '" + args[0] + "'");
+                        if (platform != "")
+                        {
+                            Console.WriteLine("Platform already specified!");
+                            return;
+                        }
+                        else
+                        {
+                            if (i >= args.Length)
+                            {
+                                Console.WriteLine("Expected platform after -p, but didn't get it!");
+                                return;
+                            }
+                            else
+                            {
+                                arg = args[i];
+                                i++;
+                                platform = arg;
+                            }
+                        }
+                    }
+                    else // else it's a target.
+                    {
+                        if (targets.Contains(arg.Trim()))
+                        {
+                            Console.WriteLine("Target '" + arg.Trim() + "' already specified!");
+                            return;
+                        }
+                        else
+                        {
+                            targets.Add(arg.Trim());
+                        }
+                    }
+                }
+
+                #region Setup Defaults
+                if (targets.Count == 0)
+                {
+                    targets.Add("all");
+                }
+                if (platform == "")
+                {
+                    platform = "WIN32";
+                }
+                if (filename == "")
+                {
+                    if (File.Exists("makefile.omake"))
+                    {
+                        try
+                        {
+                            strm = new StreamReader("makefile.omake");
+                        }
+                        catch
+                        {
+                            Console.WriteLine("An error occurred when opening the file! '" + args[0] + "'");
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Could not find the default makefile, and no makefile was specified!");
                         return;
                     }
+
                 }
-                else
-                {
-                    Console.WriteLine("Couldn't find the file at '" + args[0] + "'! Perhaps you forgot to create it?");
-                }
+                #endregion
+
+                #endregion
             }
             else
             {
+                #region We have no arguments
                 if (File.Exists("makefile.omake"))
                 {
                     try
@@ -47,12 +154,16 @@ namespace OMake
                         Console.WriteLine("An error occurred when opening the file! '" + args[0] + "'");
                         return;
                     }
+                    filename = "makefile.omake";
+                    platform = "WIN32";
+                    targets.Add("all");
                 }
                 else
                 {
                     Console.WriteLine("Could not find the default makefile, and no makefile was specified!");
                     return;
                 }
+                #endregion
             }
             #endregion
             t.Stop();
@@ -75,7 +186,7 @@ namespace OMake
 
 
             Executor e = new Executor(prc);
-            e.Execute("WIN32");
+            e.Execute(platform, targets);
 
 
             Log.Cleanup();

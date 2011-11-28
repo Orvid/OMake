@@ -49,49 +49,60 @@ namespace OMake
             this.Config = proc.Config;
         }
 
-        public void Execute(string platform)
+        public void Execute(string platform, List<string> targets)
         {
-            FinalDecompisition(platform);
-
-            if (ErrorManager.ErrorCount > 0)
+            foreach (string target in targets)
             {
-                ErrorManager.Error(54, Processor.file);
-                return;
-            }
-
-            foreach (string s in Config.Statements)
-            {
-                if (s.Trim() != "")
+                FinalDecompisition(platform, target);
+                if (ErrorManager.ErrorCount > 0)
                 {
-                    string tool = s.Substring(0, s.IndexOf(' ')).Trim();
-                    tool = Config.GetTool(platform, tool);
-                    tool = Path.GetFullPath(tool);
-                    ProcessStartInfo psi = new ProcessStartInfo(tool, s.Substring(s.IndexOf(' ')).Trim());
-                    psi.UseShellExecute = false;
-                    psi.RedirectStandardOutput = true;
-                    psi.RedirectStandardError = true;
-                    Process p = new Process();
-                    p.StartInfo = psi;
-                    p.OutputDataReceived += (sender, args) => { if (args.Data != null) Console.WriteLine(args.Data); };
-                    p.ErrorDataReceived += (sender, args) => { if (args.Data != null) Console.WriteLine(args.Data); };
-                    Console.WriteLine("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments);
-                    p.Start();
-                    p.BeginOutputReadLine();
-                    p.BeginErrorReadLine(); 
-                    p.WaitForExit();
-                    if (p.ExitCode != 0)
+                    ErrorManager.Error(54, Processor.file);
+                    return;
+                }
+                foreach (string s in Config.Targets[target].Statements)
+                {
+                    if (s.Trim() != "")
                     {
-                        ErrorManager.Error(53, Processor.file, p.ExitCode.ToString());
-                        return;
+                        string tmps = s.Trim();
+                        string tool = s.Trim().Substring(0, s.Trim().IndexOf(' ')).Trim();
+                        tool = Config.GetTool(platform, target, tool);
+                        tool = Path.GetFullPath(tool);
+                        ProcessStartInfo psi = new ProcessStartInfo(tool, s.Substring(s.IndexOf(' ')).Trim());
+                        psi.UseShellExecute = false;
+                        psi.RedirectStandardOutput = true;
+                        psi.RedirectStandardError = true;
+                        Process p = new Process();
+                        p.StartInfo = psi;
+                        p.OutputDataReceived += new DataReceivedEventHandler(DataRecieved);
+                        p.ErrorDataReceived += new DataReceivedEventHandler(DataRecieved);
+                        Console.WriteLine("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments);
+                        Log.WriteLine(string.Format("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments));
+                        p.Start();
+                        p.BeginOutputReadLine();
+                        p.BeginErrorReadLine();
+                        p.WaitForExit();
+                        if (p.ExitCode != 0)
+                        {
+                            ErrorManager.Error(53, Processor.file, p.ExitCode.ToString());
+                            return;
+                        }
                     }
                 }
             }
         }
+        private void DataRecieved(object sender, DataReceivedEventArgs args)
+        {
+            if (args.Data != null)
+            {
+                Console.WriteLine(args.Data);
+                Log.WriteLine(args.Data);
+            }
+        }
 
-        private void FinalDecompisition(string plat)
+        private void FinalDecompisition(string plat, string target)
         {
             List<string> newlist = new List<string>();
-            foreach (string s in Config.Statements)
+            foreach (string s in Config.Targets[target].Statements)
             {
                 string tmp = s;
                 string buf = "";
@@ -103,7 +114,7 @@ namespace OMake
                     buf = buf.Substring(1).Trim();
                     buf = buf.Substring(0, buf.Length - 1).Trim();
                     // It's now a valid constant (or it should be)
-                    tmp = tmp.Replace(m.Value, Config.GetConstant(plat, buf));
+                    tmp = tmp.Replace(m.Value, Config.GetConstant(plat, target, buf));
                     #endregion
                 }
                 if (CustomConstant_Regex.IsMatch(tmp))
@@ -136,7 +147,7 @@ namespace OMake
                     innerinnerLst = innerinnerLst.Substring(1).Trim();
                     innerinnerLst = innerinnerLst.Substring(0, innerinnerLst.Length - 1).Trim();
                     // Now we have the actual name of the list.
-                    List<string> srces = Config.GlobalSources[innerinnerLst];
+                    List<string> srces = Config.ResolveSource(plat, target, innerinnerLst);
                     innerLst = innerLst.Substring(2).Trim();
                     innerLst = innerLst.Substring(1).Trim();
                     innerLst = innerLst.Substring(innerinnerLst.Length).Trim();
@@ -186,8 +197,8 @@ namespace OMake
                     goto BeforeInnerListResolve;
                 newlist.Add(tmp);
             }
-            Config.Statements = newlist;
-            //throw new Exception();
+            Config.Targets[target].Statements = newlist;
+            
         }
     }
 }

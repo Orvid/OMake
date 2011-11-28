@@ -117,38 +117,59 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="11" xml:space="preserve">
-    <value>Re-definition of global tool '{0}'!</value>
+  <data name="~warning" xml:space="preserve">
+    <value>Warning</value>
+    <comment>The Error manager needs to know how to say 'Warning'. It has the '~' before it so that it appears at the top of this list.</comment>
   </data>
-  <data name="13" xml:space="preserve">
-    <value>Re-definition of platform specific constant '{0}'!</value>
-  </data>
-  <data name="15" xml:space="preserve">
-    <value>Re-definition of global constant '{0}'!</value>
-  </data>
-  <data name="2" xml:space="preserve">
+  <data name="00002" xml:space="preserve">
     <value>Unknown Platform '{0}'! Perhaps it hasn't been declared yet?</value>
   </data>
-  <data name="47" xml:space="preserve">
-    <value>Multiple IManglerLanguage's found for '{0}'!</value>
-  </data>
-  <data name="48" xml:space="preserve">
-    <value>Unknown language name '{0}'! Proceding anyways.</value>
-  </data>
-  <data name="5" xml:space="preserve">
+  <data name="00005" xml:space="preserve">
     <value>Re-definition of platform '{0}'!</value>
   </data>
-  <data name="52" xml:space="preserve">
-    <value>Re-definition of string mangler '{0}'!</value>
-  </data>
-  <data name="6" xml:space="preserve">
+  <data name="00006" xml:space="preserve">
     <value>Re-definition of platform alias '{0}'!</value>
   </data>
-  <data name="7" xml:space="preserve">
+  <data name="00007" xml:space="preserve">
     <value>Re-definition of platform specific Tool '{0}'!</value>
   </data>
-  <data name="warning" xml:space="preserve">
-    <value>Warning</value>
-    <comment>The Error manager needs to know how to say 'Warning'</comment>
+  <data name="00011" xml:space="preserve">
+    <value>Re-definition of global tool '{0}'!</value>
+  </data>
+  <data name="00013" xml:space="preserve">
+    <value>Re-definition of platform specific constant '{0}'!</value>
+  </data>
+  <data name="00015" xml:space="preserve">
+    <value>Re-definition of global constant '{0}'!</value>
+  </data>
+  <data name="00047" xml:space="preserve">
+    <value>Multiple IManglerLanguage's found for '{0}'!</value>
+  </data>
+  <data name="00048" xml:space="preserve">
+    <value>Unknown language name '{0}'! Proceding anyways.</value>
+  </data>
+  <data name="00052" xml:space="preserve">
+    <value>Re-definition of string mangler '{0}'!</value>
+  </data>
+  <data name="00062" xml:space="preserve">
+    <value>Manglers can only be declared in the global scope, can continue, but that needs to be fixed in the makefile.</value>
+  </data>
+  <data name="00067" xml:space="preserve">
+    <value>Re-definition of target constant '{0}'!</value>
+  </data>
+  <data name="00074" xml:space="preserve">
+    <value>Re-definition of target platform specific Tool '{0}'!</value>
+  </data>
+  <data name="00076" xml:space="preserve">
+    <value>Re-definition of target tool '{0}'!</value>
+  </data>
+  <data name="00078" xml:space="preserve">
+    <value>Re-definition of target platform alias '{0}'!</value>
+  </data>
+  <data name="00081" xml:space="preserve">
+    <value>Re-definition of target platform '{0}'!</value>
+  </data>
+  <data name="00089" xml:space="preserve">
+    <value>Cache file '{0}' isn't a valid OMake cache file!</value>
   </data>
 </root>

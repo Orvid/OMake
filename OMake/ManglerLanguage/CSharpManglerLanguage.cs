@@ -72,6 +72,7 @@ namespace OMake
                     curChar = (char)stin.Read();
                     if (curChar == '/')
                     {
+                        #region Comment
                         if (((char)stin.Peek()) == '/')
                         {
                             stb.Append(curChar);
@@ -107,6 +108,75 @@ namespace OMake
                                     stb.Append(curChar);
                                 }
                             }
+                        }
+                        else
+                        {
+                            stb.Append(curChar);
+                        }
+                        #endregion
+                    }
+                    else if (curChar == '"')
+                    {
+                        #region String
+                        // We are starting a string block.
+                        // We do this so that any brackets inside
+                        // the comment don't mess with our overall
+                        // count.
+                        stb.Append(curChar);
+                        inCommentBlock = true;
+                        while (inCommentBlock)
+                        {
+                            curChar = (char)stin.Read();
+                            if (curChar == '\\')
+                            {
+                                if (((char)stin.Peek()) == '"')
+                                {
+                                    stb.Append(curChar);
+                                    stb.Append((char)stin.Read());
+                                }
+                                else
+                                {
+                                    stb.Append(curChar);
+                                }
+                            }
+                            else if (curChar == '"')
+                            {
+                                stb.Append(curChar);
+                                inCommentBlock = false;
+                            }
+                            else
+                            {
+                                stb.Append(curChar);
+                            }
+                        }
+                        #endregion
+                    }
+                    else if (curChar == '@')
+                    {
+                        if (((char)stin.Peek()) == '"')
+                        {
+                            #region Un-Escapable String
+                            // We are starting a string block.
+                            // We do this so that any brackets inside
+                            // the comment don't mess with our overall
+                            // count.
+                            stb.Append(curChar);
+                            stb.Append((char)stin.Read());
+                            inCommentBlock = true;
+                            while (inCommentBlock)
+                            {
+                                curChar = (char)stin.Read();
+                                if (curChar == '"')
+                                {
+                                    stb.Append(curChar);
+                                    inCommentBlock = false;
+                                }
+                                else
+                                {
+                                    stb.Append(curChar);
+                                }
+                            }
+                            #endregion
                         }
                         else
                         {

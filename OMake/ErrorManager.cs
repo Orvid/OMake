@@ -22,11 +22,11 @@ namespace OMake
         /// <summary>
         /// The word 'Error' in the native language.
         /// </summary>
-        private static readonly string errString = NLS.GetErrString("error");
+        private static readonly string errString = NLS.GetErrString("~error");
         /// <summary>
         /// The word 'Warning' in the native language.
         /// </summary>
-        private static readonly string warnString = NLS.GetErrString("warning");
+        private static readonly string warnString = NLS.GetWarnString("~warning");
 
         /// <summary>
         /// Logs the specified error.
@@ -36,7 +36,7 @@ namespace OMake
         /// <param name="args">The parameters for the formatting.</param>
         public static void Error(ulong errorNumber, OMakeFile fle, params object[] args)
         {
-            string err = NLS.GetErrString(errorNumber.ToString());
+            string err = NLS.GetErrString(errorNumber.ToString().PadLeft(5, '0'));
             // The check is only here because I'm lazy when I type.
             if (args != null)
                 err = string.Format(err, args);
@@ -53,7 +53,7 @@ namespace OMake
         /// <param name="args">The parameters for the formatting.</param>
         public static void Warning(ulong warningNumber, OMakeFile fle, params object[] args)
         {
-            string warn = NLS.GetWarnString(warningNumber.ToString());
+            string warn = NLS.GetWarnString(warningNumber.ToString().PadLeft(5, '0'));
             // The check is only here because I'm lazy when I type.
             if (args != null)
                 warn = string.Format(warn, args);

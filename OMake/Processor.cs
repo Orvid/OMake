@@ -65,7 +65,7 @@ namespace OMake
                     }
                     else
                     {
-                        Config.Statements.Add(buf);
+                        Config.Targets["all"].Statements.Add(buf);
                     }
                 }
             }
@@ -195,7 +195,7 @@ namespace OMake
                             // Now we can emit the expanded version.
                             foreach (string s in Sources)
                             {
-                                Config.Statements.Add(baseCommand + s);
+                                Config.Targets["all"].Statements.Add(baseCommand + s);
                             }
 
                             // And now a bit of cleanup
@@ -909,7 +909,7 @@ namespace OMake
 
         private string ProcessDefine(string buf)
         {
-            buf = buf.Substring(8);
+            buf = buf.Substring(8).Trim();
             if (buf.ToLower().StartsWith("platform"))
             {
                 buf = ProcessDefinePlatform(buf);
@@ -929,6 +929,10 @@ namespace OMake
             else if (buf.ToLower().StartsWith("mangler"))
             {
                 buf = ProcessDefineMangler(buf);
+            }
+            else if (buf.ToLower().StartsWith("target"))
+            {
+                buf = ProcessTarget(buf);
             }
             else
             {
@@ -1231,7 +1235,518 @@ namespace OMake
         #endregion
 
         #endregion
+        
+        #region Process Define Target
 
+        #region Process Target
+        private string ProcessTarget(string buf)
+        {
+            buf = buf.Substring(6).Trim();
+            string Target;
+            if (!buf.Trim().StartsWith("("))
+            {
+                ErrorManager.Error(57, file);
+            }
+            else
+            {
+                buf = buf.Substring(1).Trim();
+                if (buf.Substring(buf.Length - 1, 1) != ")")
+                {
+                    ErrorManager.Error(58, file);
+                }
+                else
+                {
+                    buf = buf.Substring(0, buf.Length - 1).Trim();
+                    Target = buf;
+                    if (Config.Targets.ContainsKey(Target))
+                    {
+                        if (Target != "all")
+                        {
+                            ErrorManager.Error(59, file, Target);
+                            return buf;
+                        }
+                    }
+                    else
+                    {
+                        Config.Targets.Add(Target, new TargetConfiguration());
+                    }
+                    buf = stin.ReadLine().Trim();
+                    file.LineNumber++;
+                    if (buf != "{")
+                    {
+                        ErrorManager.Error(60, file, buf);
+                        return "";
+                    }
+                    //throw new Exception();
+                    bool inSourceBlock = true;
+                    while (inSourceBlock && !stin.EndOfStream)
+                    {
+                        buf = stin.ReadLine();
+                        file.LineNumber++;
+                        if (buf.Trim() == "}")
+                        {
+                            inSourceBlock = false;
+                            break;
+                        }
+                        else
+                        {
+                            if (buf.Trim() != "")
+                            {
+                                if (buf.Trim().ToLower().StartsWith("#define"))
+                                {
+                                    buf = ProcessTarget_Define(buf.Trim(), Target);
+                                }
+                                else if (buf.Trim().StartsWith("//"))
+                                {
+                                    // It's a comment and we ignore it.
+                                }
+                                else if (buf.Trim().ToLower().StartsWith("common"))
+                                {
+                                    // We MUST decompose the statements here, 
+                                    // otherwise things will get out of order.
+                                    buf = ProcessTarget_Common(buf.Trim(), Target);
+                                }
+                                else
+                                {
+                                    Config.Targets[Target].Statements.Add(buf.Trim());
+                                }
+                            }
+                        }
+                    }
+                    if (inSourceBlock)
+                    {
+                        ErrorManager.Error(61, file);
+                        return "";
+                    }
+                }
+            }
+            return buf;
+        }
+        #endregion
+
+        #region Process Target Define
+        private string ProcessTarget_Define(string buf, string target)
+        {
+            buf = buf.Substring(7).Trim();
+            if (buf.ToLower().StartsWith("platform"))
+            {
+                buf = ProcessTarget_DefinePlatform(buf, target);
+            }
+            else if (buf.ToLower().StartsWith("tool"))
+            {
+                buf = ProcessTarget_DefineTool(buf, target);
+            }
+            else if (buf.ToLower().StartsWith("const"))
+            {
+                buf = ProcessTarget_DefineConst(buf, target);
+            }
+            else if (buf.ToLower().StartsWith("source"))
+            {
+                buf = ProcessTarget_DefineSource(buf, target);
+            }
+            else if (buf.ToLower().StartsWith("mangler"))
+            {
+                ErrorManager.Warning(62, file);
+                buf = ProcessDefineMangler(buf);
+            }
+            else
+            {
+                ErrorManager.Error(63, file, buf);
+            }
+            return buf;
+        }
+        #endregion
+
+        #region Process Target Define Const
+        private string ProcessTarget_DefineConst(string buf, string target)
+        {
+            buf = buf.Substring(5);
+            if (buf.StartsWith("_"))
+            {
+                buf = buf.Substring(1).Trim();
+                string plat = buf.Substring(0, buf.IndexOf('('));
+                if (!Config.IsValidPlatform(plat, target))
+                {
+                    ErrorManager.Error(64, file, plat, target);
+                }
+                else
+                {
+                    buf = buf.Substring(plat.Length, buf.Length - plat.Length).Trim();
+                    plat = Config.ResolvePlatform(plat, target);
+                    if (!buf.Trim().StartsWith("("))
+                    {
+                        ErrorManager.Error(65, file);
+                    }
+                    else
+                    {
+                        buf = buf.Substring(1).Trim();
+                        string cnst = buf.Substring(0, buf.IndexOf(',')).Trim();
+                        buf = buf.Substring(buf.IndexOf(',') + 1, (buf.Length - buf.IndexOf(',')) - 3).Trim();
+                        if (Config.Targets[target].Configs[plat].Constants.ContainsKey(cnst))
+                        {
+                            ErrorManager.Warning(13, file, cnst);
+                            Config.Targets[target].Configs[plat].Constants[cnst] = buf;
+                        }
+                        else
+                        {
+                            Config.Targets[target].Configs[plat].Constants.Add(cnst, buf);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (!buf.Trim().StartsWith("("))
+                {
+                    ErrorManager.Error(66, file, target);
+                }
+                else
+                {
+                    buf = buf.Substring(1).Trim();
+                    string cnst = buf.Substring(0, buf.IndexOf(',')).Trim();
+                    buf = buf.Substring(buf.IndexOf(',') + 1, (buf.Length - buf.IndexOf(',')) - 3).Trim();
+                    if (Config.Targets[target].TargetConstants.ContainsKey(cnst))
+                    {
+                        ErrorManager.Warning(67, file, cnst);
+                        Config.Targets[target].TargetConstants[cnst] = buf;
+                    }
+                    else
+                    {
+                        Config.Targets[target].TargetConstants.Add(cnst, buf);
+                    }
+                }
+            }
+            return buf;
+        }
+        #endregion
+
+        #region Process Target Define Source
+        private string ProcessTarget_DefineSource(string buf, string target)
+        {
+            buf = buf.Substring(6);
+            if (!buf.Trim().StartsWith("("))
+            {
+                ErrorManager.Error(68, file);
+            }
+            else
+            {
+                buf = buf.Substring(1).Trim();
+                if (buf.Substring(buf.Length - 1, 1) != ")")
+                {
+                    ErrorManager.Error(69, file);
+                }
+                else
+                {
+                    buf = buf.Substring(0, buf.Length - 1).Trim();
+                    string sourceName = buf;
+                    buf = stin.ReadLine().Trim();
+                    file.LineNumber++;
+                    if (buf != "{")
+                    {
+                        ErrorManager.Error(70, file, buf);
+                        return "";
+                    }
+                    List<string> sources = new List<string>();
+                    bool inSourceBlock = true;
+                    while (inSourceBlock && !stin.EndOfStream)
+                    {
+                        buf = stin.ReadLine();
+                        file.LineNumber++;
+                        if (buf.Trim() == "}")
+                        {
+                            inSourceBlock = false;
+                            break;
+                        }
+                        else
+                        {
+                            if (!buf.Trim().StartsWith("#"))
+                            {
+                                sources.Add(buf.Trim());
+                            }
+                        }
+                    }
+                    if (inSourceBlock)
+                    {
+                        ErrorManager.Error(71, file);
+                    }
+                    else
+                    {
+                        Config.Targets[target].TargetSources.Add(sourceName, sources);
+                    }
+                }
+            }
+            return buf;
+        }
+        #endregion
+
+        #region Process Target Define Tool
+        private string ProcessTarget_DefineTool(string buf, string target)
+        {
+            buf = buf.Substring(4);
+            if (buf.StartsWith("_"))
+            {
+                buf = buf.Substring(1).Trim();
+                string plat = buf.Substring(0, buf.IndexOf('('));
+                if (!Config.IsValidPlatform(plat, target))
+                {
+                    ErrorManager.Error(72, file, plat);
+                }
+                else
+                {
+                    buf = buf.Substring(plat.Length, buf.Length - plat.Length).Trim();
+                    plat = Config.ResolvePlatform(plat, target);
+                    if (!buf.Trim().StartsWith("("))
+                    {
+                        ErrorManager.Error(73, file);
+                    }
+                    else
+                    {
+                        buf = buf.Substring(1).Trim();
+                        string tool = buf.Substring(0, buf.IndexOf(',')).Trim();
+                        buf = buf.Substring(buf.IndexOf(',') + 1, (buf.Length - buf.IndexOf(',')) - 3).Trim();
+                        if (Config.Targets[target].Configs[plat].Tools.ContainsKey(tool))
+                        {
+                            ErrorManager.Warning(74, file, tool);
+                            Config.Targets[target].Configs[plat].Tools[tool] = buf;
+                        }
+                        else
+                        {
+                            Config.Targets[target].Configs[plat].Tools.Add(tool, buf);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (!buf.Trim().StartsWith("("))
+                {
+                    ErrorManager.Error(75, file);
+                }
+                else
+                {
+                    buf = buf.Substring(1).Trim();
+                    string tool = buf.Substring(0, buf.IndexOf(',')).Trim();
+                    buf = buf.Substring(buf.IndexOf(',') + 1, (buf.Length - buf.IndexOf(',')) - 3).Trim();
+                    if (Config.Targets[target].TargetTools.ContainsKey(tool))
+                    {
+                        ErrorManager.Warning(76, file, tool);
+                        Config.Targets[target].TargetTools[tool] = buf;
+                    }
+                    else
+                    {
+                        Config.Targets[target].TargetTools.Add(tool, buf);
+                    }
+                }
+            }
+            return buf;
+        }
+        #endregion
+
+        #region Process Target Define Platform
+        private string ProcessTarget_DefinePlatform(string buf, string target)
+        {
+            buf = buf.Substring(8);
+            if (buf.StartsWith("_ALIAS"))
+            {
+                buf = buf.Substring(6);
+                if (!buf.Trim().StartsWith("("))
+                {
+                    ErrorManager.Error(77, file);
+                }
+                else
+                {
+                    buf = buf.Substring(1).Trim();
+                    string plat = buf.Substring(0, buf.IndexOf(',')).Trim();
+                    if (!Config.IsValidPlatform(plat, target))
+                    {
+                        ErrorManager.Warning(2, file, plat);
+                    }
+                    // It may not be a valid platform, but 
+                    // we're adding the alias none-the-less.
+                    if (Config.Targets[target].PlatformAliases.ContainsKey(buf))
+                    {
+                        ErrorManager.Warning(78, file, buf);
+                    }
+                    else
+                    {
+                        buf = buf.Substring(buf.IndexOf(',') + 1, (buf.Length - buf.IndexOf(',')) - 3).Trim();
+                        Config.Targets[target].PlatformAliases.Add(buf, plat);
+                    }
+                }
+            }
+            else
+            {
+                if (!buf.Trim().StartsWith("("))
+                {
+                    ErrorManager.Error(79, file);
+                }
+                else
+                {
+                    buf = buf.Substring(1).Trim();
+                    if (buf.Substring(buf.Length - 2, 2) != ");")
+                    {
+                        ErrorManager.Error(80, file, buf.Substring(buf.Length - 2, 2));
+                    }
+                    else
+                    {
+                        buf = buf.Substring(0, buf.Length - 2).Trim();
+                        if (Config.Targets[target].Platforms.Contains(buf))
+                        {
+                            ErrorManager.Warning(81, file, buf);
+                        }
+                        else
+                        {
+                            Config.Targets[target].Platforms.Add(buf);
+                            Config.Targets[target].Configs.Add(buf, new PlatformConfiguration());
+                        }
+                    }
+                }
+            }
+            return buf;
+        }
+        #endregion
+
+        #region Process Target Common
+        private string ProcessTarget_Common(string buf, string target)
+        {
+            // We MUST decompose the statements here, 
+            // otherwise things will get out of order.
+            buf = buf.Substring(6).Trim();
+            if (buf.ToLower().StartsWith("tool"))
+            {
+                #region Process Tool
+                buf = buf.Substring(4).Trim();
+                if (buf.StartsWith("("))
+                {
+                    buf = buf.Substring(1).Trim();
+                    string baseCommand = buf.Substring(0, buf.LastIndexOf(')'));
+                    buf = buf.Substring(buf.LastIndexOf(')') + 1).Trim();
+                    if (buf.StartsWith(":"))
+                    {
+                        buf = buf.Substring(1).Trim();
+                        // All that should be left at this point is 
+                        // the list we'll be iterating through.
+                        if (Config.ResolveSource("WIN32", target, buf) != null)
+                        {
+                            string SourceListName = buf;
+                            // We have a valid list, now we need to
+                            // process the options for the list.
+
+                            #region Read the expressions
+                            buf = stin.ReadLine().Trim();
+                            file.LineNumber++;
+                            if (buf != "{")
+                            {
+                                ErrorManager.Error(86, file, buf);
+                            }
+                            List<string> expressions = new List<string>();
+                            bool inCommonBlock = true;
+                            while (inCommonBlock && !stin.EndOfStream)
+                            {
+                                buf = stin.ReadLine();
+                                file.LineNumber++;
+                                if (buf.Trim() == "}")
+                                {
+                                    inCommonBlock = false;
+                                    break;
+                                }
+                                else
+                                {
+                                    expressions.Add(buf.Trim());
+                                }
+                            }
+                            if (inCommonBlock)
+                            {
+                                ErrorManager.Error(87, file);
+                            }
+                            #endregion
+
+                            List<string> prefixes = null;
+                            List<string> filenames = null;
+                            List<string> suffixes = null;
+
+                            #region Process Expressions into specifics
+                            // The order doesn't really matter
+                            // here.
+                            foreach (string s in expressions)
+                            {
+                                if (s.Trim().ToLower().StartsWith("#prefix"))
+                                {
+                                    if (prefixes == null)
+                                        prefixes = new List<string>();
+                                    prefixes.Add(s.Trim().Substring(7).Trim());
+                                }
+                                else if (s.Trim().ToLower().StartsWith("#filename"))
+                                {
+                                    if (filenames == null)
+                                        filenames = new List<string>();
+                                    filenames.Add(s.Trim().Substring(9).Trim());
+                                }
+                                else if (s.Trim().ToLower().StartsWith("#suffix"))
+                                {
+                                    if (suffixes == null)
+                                        suffixes = new List<string>();
+                                    suffixes.Add(s.Trim().Substring(7).Trim());
+                                }
+                                else
+                                {
+                                    ErrorManager.Error(88, file, s.Trim());
+                                }
+                            }
+                            #endregion
+
+#warning Give correct location when we support platform specific sources.
+                            List<string> Sources = new List<string>(Config.ResolveSource("WIN32", target, SourceListName));
+
+                            if (prefixes != null)
+                            {
+                                ProcessCommon_Prefix(ref buf, prefixes, ref Sources);
+                            }
+                            if (filenames != null)
+                            {
+                                ProcessCommon_Filename(ref buf, filenames, ref Sources);
+                            }
+                            if (suffixes != null)
+                            {
+                                ProcessCommon_Suffix(ref buf, suffixes, ref Sources);
+                            }
+
+                            // Now we can emit the expanded version.
+                            foreach (string s in Sources)
+                            {
+                                Config.Targets[target].Statements.Add(baseCommand + s);
+                            }
+
+                            // And now a bit of cleanup
+                            expressions = null;
+                            Sources = null;
+                            GC.Collect();
+                        }
+                        else
+                        {
+                            ErrorManager.Error(83, file, buf);
+                        }
+                    }
+                    else
+                    {
+                        ErrorManager.Error(84, file, buf.Substring(0, 1));
+                    }
+                }
+                else
+                {
+                    ErrorManager.Error(85, file, buf.Substring(0, 1));
+                }
+                #endregion
+            }
+            else
+            {
+                ErrorManager.Error(82, file, buf);
+            }
+            return buf;
+        }
+        #endregion
+
+        #endregion
 
 
 
