@@ -38,7 +38,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration.cs" />
-    <Compile Include="BaseStringMangler.cs" />
+    <Compile Include="Helpers.cs" />
     <Compile Include="ManglerLanguage\CSharpManglerLanguage.cs" />
     <Compile Include="ManglerLanguage\IManglerLanguage.cs" />
     <Compile Include="OMakeFile.cs" />
@@ -55,6 +55,7 @@
     <None Include="Makefile.omake">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="OMake.g" />
     <None Include="PerformanceTest.omake">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

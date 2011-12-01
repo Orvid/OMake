@@ -170,6 +170,7 @@ namespace OMake
             Log.WriteLine("Time to Locate Makefile: '" + t.ElapsedMilliseconds.ToString() + "'");
             t.Reset();
 
+
             t.Start();
             Processor prc = new Processor(strm, filename);
             System.GC.Collect();
@@ -177,20 +178,109 @@ namespace OMake
             Log.WriteLine("Processor Initialization Time: '" + t.ElapsedMilliseconds.ToString() + "'");
             t.Reset();
 
+            Cache.Initialize();
 
             t.Start();
-            prc.Process();
+            bool NeedToReParse = true;
+            byte[] chksum = System.Security.Cryptography.SHA256.Create().ComputeHash(strm.BaseStream);
+            if (Cache.Contains("MakefileChecksum"))
+            {
+                byte[] oldChksum = Cache.GetData("MakefileChecksum");
+                if (Helpers.ByteArrayEqual(chksum, oldChksum))
+                {
+                    bool hasAllConfs = true;
+                    foreach (string s in targets)
+                    {
+                        if (!Cache.Contains("Makefile.Cache.HasParseCache-" + s + "." + platform))
+                        {
+                            hasAllConfs = false;
+                            break;
+                        }
+                        if (!Cache.GetBool("Makefile.Cache.HasParseCache-" + s + "." + platform))
+                        {
+                            hasAllConfs = false;
+                            break;
+                        }
+                    }
+                    if (hasAllConfs)
+                    {
+                        NeedToReParse = false;
+                    }
+                }
+                else
+                {
+                    Cache.SetValue("MakefileChecksum", chksum);
+                }
+            }
+            else
+            {
+                Cache.SetValue("MakefileChecksum", chksum);
+            }
+            strm.BaseStream.Position = 0;
+
+        HaveToReParse:
+            if (NeedToReParse)
+            {
+                prc.Process();
+            }
+            else
+            {
+
+                #region Check for errors in the cache
+                foreach (string s in targets)
+                {
+                    string baseName = "Makefile.ParseCache-" + s + "." + platform + ".";
+                    if (!Cache.Contains(baseName + "StatementCount"))
+                    {
+                        ErrorManager.Warning(92, Processor.file, baseName + "StatementCount");
+                        NeedToReParse = true;
+                        goto HaveToReParse;
+                    }
+                    int cnt = Cache.GetInt(baseName + "StatementCount");
+                    for (int i = 1; i <= cnt; i++)
+                    {
+                        if (!Cache.Contains(baseName + "Statements." + i.ToString()))
+                        {
+                            ErrorManager.Warning(92, Processor.file, baseName + "Statements." + i.ToString());
+                            NeedToReParse = true;
+                            goto HaveToReParse;
+                        }
+                    }
+                }
+                #endregion
+
+                #region Use the cache
+                foreach (string s in targets)
+                {
+                    if (s != "all")
+                    {
+                        prc.Config.Targets.Add(s, new TargetConfiguration());
+                    }
+                    string baseName = "Makefile.ParseCache-" + s + "." + platform + ".";
+                    int cnt = Cache.GetInt(baseName + "StatementCount");
+                    for (int i = 1; i <= cnt; i++)
+                    {
+                        prc.Config.Targets[s].Statements.Add(Cache.GetString(baseName + "Statements." + i.ToString())); 
+                    }
+                }
+                #endregion
+
+            }
             t.Stop();
             Log.WriteLine("Processing Time: '" + t.ElapsedMilliseconds.ToString() + "'");
             t.Reset();
 
 
             Executor e = new Executor(prc);
+            if (NeedToReParse)
+            {
+                e.FinalDecomp(platform, targets);
+            }
             e.Execute(platform, targets);
 
-
+            Cache.Finalize();
             Log.Cleanup();
             return;
 		}
-	}
+    }
 }

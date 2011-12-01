@@ -338,4 +338,7 @@
   <data name="00088" xml:space="preserve">
     <value>Unknown expression in a target common tool block '{0}'!</value>
   </data>
+  <data name="00090" xml:space="preserve">
+    <value>Cache file version is newer than is supported! Max version supported is '{0}' cache file version is '{1}'.</value>
+  </data>
 </root>

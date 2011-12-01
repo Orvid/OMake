@@ -172,4 +172,13 @@
   <data name="00089" xml:space="preserve">
     <value>Cache file '{0}' isn't a valid OMake cache file!</value>
   </data>
+  <data name="00091" xml:space="preserve">
+    <value>Duplicate cache object in file! ({0})</value>
+  </data>
+  <data name="00092" xml:space="preserve">
+    <value>Parse Cache invalid! Reparsing. (Couldn't find '{0}')</value>
+  </data>
+  <data name="00093" xml:space="preserve">
+    <value>Cache Invalid! Cache file was created for a different path than it is currently in.</value>
+  </data>
 </root>

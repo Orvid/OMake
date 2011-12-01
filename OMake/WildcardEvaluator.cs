@@ -1,6 +1,9 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace OMake
 {
@@ -19,6 +22,10 @@ namespace OMake
         /// This cache is for Regex expressions.
         /// </summary>
         private static Dictionary<string, Regex> RegexCache = new Dictionary<string, Regex>();
+        /// <summary>
+        /// The binary formatter which we use for caching regex's.
+        /// </summary>
+        private static BinaryFormatter binform = new BinaryFormatter(null, new StreamingContext(StreamingContextStates.File));
 
         /// <summary>
         /// Checks if the specified string matches the specified wildcard.
@@ -30,7 +37,19 @@ namespace OMake
         {
             if (!WildcardCache.ContainsKey(wildcard))
             {
-                WildcardCache.Add(wildcard, new Regex("^" + (Regex.Escape(wildcard).Replace("\\*", ".*").Replace("\\?", ".")) + "$", RegexOptions.Compiled));
+                if (Cache.Contains("OMake.RegexCache.Wildcard-" + wildcard))
+                {
+                    MemoryStream ms = new MemoryStream(Cache.GetData("OMake.RegexCache.Wildcard-" + wildcard));
+                    WildcardCache.Add(wildcard, (Regex)binform.Deserialize(ms));
+                }
+                else
+                {
+                    WildcardCache.Add(wildcard, new Regex("^" + (Regex.Escape(wildcard).Replace("\\*", ".*").Replace("\\?", ".")) + "$", RegexOptions.Compiled));
+                    WildcardCache[wildcard].IsMatch(""); // Ensure it get's fully compiled.
+                    MemoryStream ms = new MemoryStream(8192);
+                    binform.Serialize(ms, WildcardCache[wildcard]);
+                    Cache.SetValue("OMake.RegexCache.Wildcard-" + wildcard, (byte[])ms.GetBuffer());
+                }
             }
             return WildcardCache[wildcard].IsMatch(strToCheck);
         }
@@ -45,7 +64,19 @@ namespace OMake
         {
             if (!RegexCache.ContainsKey(regex))
             {
-                RegexCache.Add(regex, new Regex(regex, RegexOptions.Compiled));
+                if (Cache.Contains("OMake.RegexCache.Regex-" + regex))
+                {
+                    MemoryStream ms = new MemoryStream(Cache.GetData("OMake.RegexCache.Regex-" + regex));
+                    RegexCache.Add(regex, (Regex)binform.Deserialize(ms));
+                }
+                else
+                {
+                    RegexCache.Add(regex, new Regex(regex, RegexOptions.Compiled));
+                    RegexCache[regex].IsMatch(""); // Ensure it get's fully compiled.
+                    MemoryStream ms = new MemoryStream(8192);
+                    binform.Serialize(ms, RegexCache[regex]);
+                    Cache.SetValue("OMake.RegexCache.Regex-" + regex, (byte[])ms.GetBuffer());
+                }
             }
             return RegexCache[regex].IsMatch(strToCheck);
         }

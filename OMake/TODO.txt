@@ -17,5 +17,7 @@ TODO:
    included in the OMake exe, as well as be 
    able to load them from the filesystem.
    
+5. Allow for Async statements.
+   
 6. Need to see if there is a way to speed up
    the caching that the WildcardEvaluator does.

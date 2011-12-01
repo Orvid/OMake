@@ -1,4 +1,6 @@
-﻿using System;
+﻿//#define USING_ANTLR
+
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -40,6 +42,21 @@ namespace OMake
 
         public void Process()
         {
+#if USING_ANTLR
+
+            OMakeLexer lx = new OMakeLexer(stin.BaseStream);
+            CommonTokenStream tokens = new CommonTokenStream(lx);
+            OMakeParser parser = new OMakeParser(tokens);
+            try
+            {
+                parser.expr();
+            }
+            catch (RecognitionException e)
+            {
+                Console.Error.WriteLine(e.StackTrace);
+            }
+
+#else
 
             #region Process File
             string buf = "";
@@ -85,7 +102,15 @@ namespace OMake
             }
             #endregion
 
+#endif
+
         }
+
+#if USING_ANTLR
+
+
+
+#else
 
         #region Process Common
 
@@ -1748,7 +1773,7 @@ namespace OMake
 
         #endregion
 
-
+#endif
 
 
     }

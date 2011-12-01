@@ -6,6 +6,24 @@ using System.Collections.Generic;
 
 namespace OMake
 {
+
+    /// <summary>
+    /// The base class for all string manglers.
+    /// </summary>
+    public abstract class BaseStringMangler
+    {
+        public abstract string MangleString(string inString);
+    }
+
+    public class ComplexMangler
+    {
+        private List<string> PrefixExpressions = new List<string>();
+        private List<string> FilenameExpressions = new List<string>();
+        private List<string> SuffixExpressions = new List<string>();
+
+    }
+
+
     /// <summary>
     /// The delegate that every string mangler must implement.
     /// </summary>
@@ -50,6 +68,7 @@ namespace OMake
         private static readonly CompilerParameters Params;
         static NameMangler()
         {
+
             #region Setup Paramaters
             Params = new CompilerParameters(new string[] { "mscorlib.dll", "System.dll", System.Reflection.Assembly.GetExecutingAssembly().Location });
             Params.IncludeDebugInformation = false;

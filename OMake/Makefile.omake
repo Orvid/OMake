@@ -44,11 +44,24 @@
 
 #define CONST(LD_ARGS, -Wall -Werror -o=);
 
+//#define DEPENDANCY(KERNEL_C_DEPENDANCIES)
+//{
+//    Include/Kernel.h
+//    Include/Hardware/PCIBus.h
+//}
+
 // We could always just execute the tools directly,
 // which there is an example of, commented out, at
 // the bottom of this file, but we're using this
 // method as it is much more powerful for working with 
 // collections of source files.
+//#define SOURCE(GCC_C_FILES)
+//{
+//    Kernel.c : $(KERNEL_C_DEPENDANCIES)
+//    KernelFile2.c : Include/Kernel.h, Include/KernelFile2.h
+//    KernelFile3.c : $(KERNEL_C_DEPENDANCIES), Include/KernelFile3.h
+//    Kernel/Hardware/PCIBus.c : Include/Harware/PCIBus.h, $(KERNEL_C_DEPENDANCIES)
+//}
 #define SOURCE(GCC_C_FILES)
 {
     Kernel.c
@@ -74,6 +87,13 @@
 // lay-man's configuration via multi-targeting.
 #define TARGET(all)
 {
+    //common MANGLER(GCC_C_FILES_MANGLER)
+    //{
+    //    #prefix{./Object/MainKernel/$(FILENAME.NO_EXTENSION.DIR_TO_FILENAME).o} : FILENAME(Kernel.c)
+    //    #prefix{./Object/KernelFiles/$(FILENAME.NO_EXTENSION.DIR_TO_FILENAME).o} : REGEX(KernelFile.+)
+    //    #prefix{./Object/Hardware/$(FILENAME.NO_EXTENSION.DIR_TO_FILENAME).o} : WILDCARD(Kernel/Hardware/*)
+    //}
+    
     
     // Rather than having to explicitly execute gcc 
     // on every file, we can just use this statement
@@ -83,7 +103,9 @@
     // that we add before each file.
     common TOOL(GCC ${GCC_ARGS}) : GCC_C_FILES
     {
-        #prefix{./Object/$(FILENAME.NO_EXTENSION.DIR_TO_FILENAME).o} : ALL
+        #prefix{./Object/$(FILENAME.NO_EXTENSION.DIR_TO_FILENAME).o} : FILENAME(Kernel.c)
+        #prefix{./Object/KernelFiles/$(FILENAME.NO_EXTENSION.DIR_TO_FILENAME).o} : REGEX(KernelFile.+)
+        #prefix{./Object/Hardware/$(FILENAME.NO_EXTENSION.DIR_TO_FILENAME).o} : WILDCARD(Kernel/Hardware/*)
     }
     
     // Now we get to link everything together.

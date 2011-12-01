@@ -1,4 +1,6 @@
-﻿using System;
+﻿#define NO_EXECUTE // If this is defined we don't do the actual execution of the makefile.
+
+using System;
 using System.IO;
 using System.Threading;
 using System.Collections.Generic;
@@ -49,28 +51,66 @@ namespace OMake
             this.Config = proc.Config;
         }
 
-        public void Execute(string platform, List<string> targets)
+        private void ResolveTools(string platform, string target)
+        {
+            List<string> newlist = new List<string>();
+            foreach (string s in Config.Targets[target].Statements)
+            {
+                string tmps = s.Trim();
+                string tool = s.Trim().Substring(0, s.Trim().IndexOf(' ')).Trim();
+                tool = Config.GetTool(platform, target, tool);
+                tool = Path.GetFullPath(tool);
+                string args = s.Trim().Substring(s.Trim().IndexOf(' ')).Trim();
+                newlist.Add(tool.Trim() + "|" + args.Trim());
+            }
+            Config.Targets[target].Statements = newlist;
+        }
+
+        public void FinalDecomp(string platform, List<string> targets)
         {
             foreach (string target in targets)
             {
                 FinalDecompisition(platform, target);
+                ResolveTools(platform, target);
+            }
+        }
+
+        public void Execute(string platform, List<string> targets)
+        {
+            foreach (string target in targets)
+            {
                 if (ErrorManager.ErrorCount > 0)
                 {
                     ErrorManager.Error(54, Processor.file);
                     return;
                 }
+
+                #region Setup the cache
+                {
+                    Cache.SetValue("Makefile.Cache.HasParseCache-" + target + "." + platform, true);
+                    string baseName = "Makefile.ParseCache-" + target + "." + platform + ".";
+                    Cache.SetValue(baseName + "StatementCount", (int)Config.Targets[target].Statements.Count);
+                    for (int i = 1; i <= Config.Targets[target].Statements.Count; i++)
+                    {
+                        Cache.SetValue(baseName + "Statements." + i.ToString(), Config.Targets[target].Statements[i - 1]);
+                    }
+                }
+                #endregion
+
                 foreach (string s in Config.Targets[target].Statements)
                 {
                     if (s.Trim() != "")
                     {
-                        string tmps = s.Trim();
-                        string tool = s.Trim().Substring(0, s.Trim().IndexOf(' ')).Trim();
-                        tool = Config.GetTool(platform, target, tool);
-                        tool = Path.GetFullPath(tool);
-                        ProcessStartInfo psi = new ProcessStartInfo(tool, s.Substring(s.IndexOf(' ')).Trim());
+                        ProcessStartInfo psi = new ProcessStartInfo(s.Substring(0, s.IndexOf('|')), s.Substring(s.IndexOf('|') + 1).Trim());
                         psi.UseShellExecute = false;
                         psi.RedirectStandardOutput = true;
                         psi.RedirectStandardError = true;
+#if NO_EXECUTE
+                        Process p = new Process();
+                        p.StartInfo = psi;
+                        Console.WriteLine("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments);
+                        Log.WriteLine(string.Format("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments));
+#else
                         Process p = new Process();
                         p.StartInfo = psi;
                         p.OutputDataReceived += new DataReceivedEventHandler(DataRecieved);
@@ -86,6 +126,7 @@ namespace OMake
                             ErrorManager.Error(53, Processor.file, p.ExitCode.ToString());
                             return;
                         }
+#endif
                     }
                 }
             }
