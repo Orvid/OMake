@@ -188,23 +188,14 @@ namespace OMake
                 byte[] oldChksum = Cache.GetData("MakefileChecksum");
                 if (Helpers.ByteArrayEqual(chksum, oldChksum))
                 {
-                    bool hasAllConfs = true;
-                    foreach (string s in targets)
+                    if (Cache.Contains("Makefile.ConfigCache"))
                     {
-                        if (!Cache.Contains("Makefile.Cache.HasParseCache-" + s + "." + platform))
-                        {
-                            hasAllConfs = false;
-                            break;
-                        }
-                        if (!Cache.GetBool("Makefile.Cache.HasParseCache-" + s + "." + platform))
-                        {
-                            hasAllConfs = false;
-                            break;
-                        }
-                    }
-                    if (hasAllConfs)
-                    {
+#if !DEBUG
+                        MemoryStream m = new MemoryStream(Cache.GetData("Makefile.ConfigCache"));
+                        System.Runtime.Serialization.Formatters.Binary.BinaryFormatter b = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter(null, new System.Runtime.Serialization.StreamingContext(System.Runtime.Serialization.StreamingContextStates.File));
+                        prc.Config = (Configuration)b.Deserialize(m);
                         NeedToReParse = false;
+#endif
                     }
                 }
                 else
@@ -225,45 +216,6 @@ namespace OMake
             }
             else
             {
-
-                #region Check for errors in the cache
-                foreach (string s in targets)
-                {
-                    string baseName = "Makefile.ParseCache-" + s + "." + platform + ".";
-                    if (!Cache.Contains(baseName + "StatementCount"))
-                    {
-                        ErrorManager.Warning(92, Processor.file, baseName + "StatementCount");
-                        NeedToReParse = true;
-                        goto HaveToReParse;
-                    }
-                    int cnt = Cache.GetInt(baseName + "StatementCount");
-                    for (int i = 1; i <= cnt; i++)
-                    {
-                        if (!Cache.Contains(baseName + "Statements." + i.ToString()))
-                        {
-                            ErrorManager.Warning(92, Processor.file, baseName + "Statements." + i.ToString());
-                            NeedToReParse = true;
-                            goto HaveToReParse;
-                        }
-                    }
-                }
-                #endregion
-
-                #region Use the cache
-                foreach (string s in targets)
-                {
-                    if (s != "all")
-                    {
-                        prc.Config.Targets.Add(s, new TargetConfiguration());
-                    }
-                    string baseName = "Makefile.ParseCache-" + s + "." + platform + ".";
-                    int cnt = Cache.GetInt(baseName + "StatementCount");
-                    for (int i = 1; i <= cnt; i++)
-                    {
-                        prc.Config.Targets[s].Statements.Add(Cache.GetString(baseName + "Statements." + i.ToString())); 
-                    }
-                }
-                #endregion
 
             }
             t.Stop();

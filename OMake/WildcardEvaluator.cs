@@ -46,7 +46,7 @@ namespace OMake
                 {
                     WildcardCache.Add(wildcard, new Regex("^" + (Regex.Escape(wildcard).Replace("\\*", ".*").Replace("\\?", ".")) + "$", RegexOptions.Compiled));
                     WildcardCache[wildcard].IsMatch(""); // Ensure it get's fully compiled.
-                    MemoryStream ms = new MemoryStream(8192);
+                    MemoryStream ms = new MemoryStream();
                     binform.Serialize(ms, WildcardCache[wildcard]);
                     Cache.SetValue("OMake.RegexCache.Wildcard-" + wildcard, (byte[])ms.GetBuffer());
                 }
@@ -73,7 +73,7 @@ namespace OMake
                 {
                     RegexCache.Add(regex, new Regex(regex, RegexOptions.Compiled));
                     RegexCache[regex].IsMatch(""); // Ensure it get's fully compiled.
-                    MemoryStream ms = new MemoryStream(8192);
+                    MemoryStream ms = new MemoryStream();
                     binform.Serialize(ms, RegexCache[regex]);
                     Cache.SetValue("OMake.RegexCache.Regex-" + regex, (byte[])ms.GetBuffer());
                 }

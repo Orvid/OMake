@@ -64,9 +64,21 @@
 //}
 #define SOURCE(GCC_C_FILES)
 {
-    Kernel.c
-    KernelFile2.c
-    KernelFile3.c
+#
+#   This isn't really the best example of dependancies
+#   because your normally only dependant on header files,
+#   not on actual source files.
+#
+    Kernel.c : KernelFile2.c, KernelFile3.c
+#
+#   I would cincerely hope you don't actually need to use 
+#   circular dependancies (especially not dependant on itself),
+#   but, either way, they do get resolved (Mind you, I didn't 
+#   really expect it to be able to do this kind of resolution,
+#   but it apparently handles this just fine)
+#
+    KernelFile2.c : KernelFile3.c
+    KernelFile3.c : KernelFile2.c, KernelFile3.c
     Kernel/Hardware/PCIBus.c
 }
 

@@ -53,17 +53,16 @@ namespace OMake
 
         private void ResolveTools(string platform, string target)
         {
-            List<string> newlist = new List<string>();
-            foreach (string s in Config.Targets[target].Statements)
+            foreach (Statement st in Config.Targets[target].Statements)
             {
+                string s = st.StatementValue;
                 string tmps = s.Trim();
                 string tool = s.Trim().Substring(0, s.Trim().IndexOf(' ')).Trim();
                 tool = Config.GetTool(platform, target, tool);
                 tool = Path.GetFullPath(tool);
                 string args = s.Trim().Substring(s.Trim().IndexOf(' ')).Trim();
-                newlist.Add(tool.Trim() + "|" + args.Trim());
+                st.StatementValue = tool.Trim() + "|" + args.Trim();
             }
-            Config.Targets[target].Statements = newlist;
         }
 
         public void FinalDecomp(string platform, List<string> targets)
@@ -87,46 +86,52 @@ namespace OMake
 
                 #region Setup the cache
                 {
-                    Cache.SetValue("Makefile.Cache.HasParseCache-" + target + "." + platform, true);
-                    string baseName = "Makefile.ParseCache-" + target + "." + platform + ".";
-                    Cache.SetValue(baseName + "StatementCount", (int)Config.Targets[target].Statements.Count);
-                    for (int i = 1; i <= Config.Targets[target].Statements.Count; i++)
-                    {
-                        Cache.SetValue(baseName + "Statements." + i.ToString(), Config.Targets[target].Statements[i - 1]);
-                    }
+                    MemoryStream m = new MemoryStream();
+                    System.Runtime.Serialization.Formatters.Binary.BinaryFormatter b = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter(null, new System.Runtime.Serialization.StreamingContext(System.Runtime.Serialization.StreamingContextStates.File));
+                    b.Serialize(m, Config);
+                    Cache.SetValue("Makefile.ConfigCache", m.GetBuffer());
                 }
                 #endregion
 
-                foreach (string s in Config.Targets[target].Statements)
+                foreach (Statement st in Config.Targets[target].Statements)
                 {
-                    if (s.Trim() != "")
+                    if (st.Modified)
                     {
-                        ProcessStartInfo psi = new ProcessStartInfo(s.Substring(0, s.IndexOf('|')), s.Substring(s.IndexOf('|') + 1).Trim());
-                        psi.UseShellExecute = false;
-                        psi.RedirectStandardOutput = true;
-                        psi.RedirectStandardError = true;
-#if NO_EXECUTE
-                        Process p = new Process();
-                        p.StartInfo = psi;
-                        Console.WriteLine("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments);
-                        Log.WriteLine(string.Format("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments));
-#else
-                        Process p = new Process();
-                        p.StartInfo = psi;
-                        p.OutputDataReceived += new DataReceivedEventHandler(DataRecieved);
-                        p.ErrorDataReceived += new DataReceivedEventHandler(DataRecieved);
-                        Console.WriteLine("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments);
-                        Log.WriteLine(string.Format("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments));
-                        p.Start();
-                        p.BeginOutputReadLine();
-                        p.BeginErrorReadLine();
-                        p.WaitForExit();
-                        if (p.ExitCode != 0)
+                        string s = st.StatementValue;
+                        if (s.Trim() != "")
                         {
-                            ErrorManager.Error(53, Processor.file, p.ExitCode.ToString());
-                            return;
-                        }
+                            ProcessStartInfo psi = new ProcessStartInfo(s.Substring(0, s.IndexOf('|')), s.Substring(s.IndexOf('|') + 1).Trim());
+                            psi.UseShellExecute = false;
+                            psi.RedirectStandardOutput = true;
+                            psi.RedirectStandardError = true;
+#if NO_EXECUTE
+                            Process p = new Process();
+                            p.StartInfo = psi;
+                            Console.WriteLine("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments);
+                            Log.WriteLine(string.Format("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments));
+#else
+                            Process p = new Process();
+                            p.StartInfo = psi;
+                            p.OutputDataReceived += new DataReceivedEventHandler(DataRecieved);
+                            p.ErrorDataReceived += new DataReceivedEventHandler(DataRecieved);
+                            Console.WriteLine("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments);
+                            Log.WriteLine(string.Format("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments));
+                            p.Start();
+                            p.BeginOutputReadLine();
+                            p.BeginErrorReadLine();
+                            p.WaitForExit();
+                            if (p.ExitCode != 0)
+                            {
+                                ErrorManager.Error(53, Processor.file, p.ExitCode.ToString());
+                                return;
+                            }
 #endif
+                        }
+                        st.SetCache();
+                    }
+                    else
+                    {
+                        Log.WriteLine("Dependancies not modified, so not executing statement '" + st.StatementValue + "'.");
                     }
                 }
             }
@@ -142,9 +147,9 @@ namespace OMake
 
         private void FinalDecompisition(string plat, string target)
         {
-            List<string> newlist = new List<string>();
-            foreach (string s in Config.Targets[target].Statements)
+            foreach (Statement st in Config.Targets[target].Statements)
             {
+                string s = st.StatementValue;
                 string tmp = s;
                 string buf = "";
             BeforeResolve:
@@ -188,7 +193,7 @@ namespace OMake
                     innerinnerLst = innerinnerLst.Substring(1).Trim();
                     innerinnerLst = innerinnerLst.Substring(0, innerinnerLst.Length - 1).Trim();
                     // Now we have the actual name of the list.
-                    List<string> srces = Config.ResolveSource(plat, target, innerinnerLst);
+                    List<SourceFile> srces = Config.ResolveSource(plat, target, innerinnerLst);
                     innerLst = innerLst.Substring(2).Trim();
                     innerLst = innerLst.Substring(1).Trim();
                     innerLst = innerLst.Substring(innerinnerLst.Length).Trim();
@@ -208,8 +213,9 @@ namespace OMake
                         }
                     }
                     List<string> finalNames = new List<string>();
-                    foreach (string strng in srces)
+                    foreach (SourceFile sf in srces)
                     {
+                        string strng = sf.File;
                         string bfr = strng;
                         foreach (StringMangler strmglr in ManglersToApply)
                         {
@@ -236,9 +242,8 @@ namespace OMake
                 }
                 if (InnerList_Regex.IsMatch(tmp))
                     goto BeforeInnerListResolve;
-                newlist.Add(tmp);
+                st.StatementValue = tmp;
             }
-            Config.Targets[target].Statements = newlist;
             
         }
     }

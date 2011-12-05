@@ -3,6 +3,213 @@ using System.Collections.Generic;
 
 namespace OMake
 {
+    /// <summary>
+    /// Represents a single statement.
+    /// </summary>
+    [Serializable]
+    public class Statement
+    {
+        /// <summary>
+        /// The actual value of the statement.
+        /// </summary>
+        public string StatementValue;
+        /// <summary>
+        /// A list of dependancies.
+        /// </summary>
+        public List<SourceFile> Dependancies;
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="Statement"/> class.
+        /// </summary>
+        /// <param name="value">The value of the statement.</param>
+        public Statement(string value)
+        {
+            this.StatementValue = value;
+            this.Dependancies = new List<SourceFile>();
+        }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="Statement"/> class.
+        /// </summary>
+        /// <param name="value">The value of the statement.</param>
+        /// <param name="dependancyList">
+        /// A list containing the files this statement is dependant upon.
+        /// </param>
+        public Statement(string value, List<SourceFile> dependancyList)
+        {
+            this.StatementValue = value;
+            this.Dependancies = new List<SourceFile>(dependancyList);
+        }
+
+        /// <summary>
+        /// Sets the cache for this statement's
+        /// dependancies.
+        /// </summary>
+        public void SetCache()
+        {
+            foreach (SourceFile s in Dependancies)
+            {
+                s.SetCache();
+            }
+        }
+
+        /// <summary>
+        /// True if one of the statement's
+        /// dependancies has been modified.
+        /// </summary>
+        public bool Modified
+        {
+            get
+            {
+                if (Dependancies.Count == 0)
+                    return true;
+                foreach (SourceFile s in Dependancies)
+                {
+                    if (s.Modified)
+                        return true;
+                }
+                return false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Represents a single source file.
+    /// </summary>
+    [Serializable]
+    public class SourceFile
+    {
+        /// <summary>
+        /// The location of the file.
+        /// </summary>
+        public string File;
+        /// <summary>
+        /// The target this SourceFile is for.
+        /// </summary>
+        public string Target;
+        /// <summary>
+        /// The platform this SourceFile is for.
+        /// </summary>
+        public string Platform;
+        /// <summary>
+        /// The list of <see cref="SourceFile"/>s that this
+        /// <see cref="SourceFile"/> depends on.
+        /// </summary>
+        public List<SourceFile> Dependancies;
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="SourceFile"/> class.
+        /// </summary>
+        /// <param name="fileName">The location of the file.</param>
+        /// <param name="targetName">The target this file is for.</param>
+        public SourceFile(string fileName, string targetName)
+        {
+            this.File = fileName;
+            this.Target = targetName;
+            this.Platform = "GLOBAL";
+            this.Dependancies = new List<SourceFile>();
+        }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="SourceFile"/> class.
+        /// </summary>
+        /// <param name="fileName">The location of the file.</param>
+        /// <param name="targetName">The target this file is for.</param>
+        /// <param name="platformName">The platform this file is for.</param>
+        public SourceFile(string fileName, string targetName, string platformName)
+        {
+            this.File = fileName;
+            this.Target = targetName;
+            this.Platform = platformName;
+            this.Dependancies = new List<SourceFile>();
+        }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="SourceFile"/> class.
+        /// </summary>
+        /// <param name="fileName">The location of the file.</param>
+        /// <param name="targetName">The target this file is for.</param>
+        /// <param name="dependancyList">The list of dependancies for this file.</param>
+        public SourceFile(string fileName, string targetName, List<SourceFile> dependancyList)
+        {
+            this.File = fileName;
+            this.Target = targetName;
+            this.Platform = "GLOBAL";
+            this.Dependancies = new List<SourceFile>(dependancyList);
+        }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="SourceFile"/> class.
+        /// </summary>
+        /// <param name="fileName">The location of the file.</param>
+        /// <param name="targetName">The target this file is for.</param>
+        /// <param name="platformName">The platform this file is for.</param>
+        /// <param name="dependancyList">The list of dependancies for this file.</param>
+        public SourceFile(string fileName, string targetName, string platformName, List<SourceFile> dependancyList)
+        {
+            this.File = fileName;
+            this.Target = targetName;
+            this.Platform = platformName;
+            this.Dependancies = new List<SourceFile>(dependancyList);
+        }
+
+        /// <summary>
+        /// Sets the cache for this dependancy.
+        /// </summary>
+        public void SetCache()
+        {
+            Cache.SetValue("OMake.PartialBuild.ModificationChecker.SourceFile-" + File + "-" + Target + "-" + Platform + ".ModificationTime", System.IO.File.GetLastWriteTimeUtc(File).ToBinary().ToString());
+        }
+
+        /// <summary>
+        /// True if the file has been
+        /// modified since it was last cached.
+        /// </summary>
+        public bool Modified
+        {
+            get
+            {
+                if (System.IO.File.Exists(File))
+                {
+                    if (Cache.Contains("OMake.PartialBuild.ModificationChecker.SourceFile-" + File + "-" + Target + "-" + Platform + ".ModificationTime"))
+                    {
+                        string CachedModTime = Cache.GetString("OMake.PartialBuild.ModificationChecker.SourceFile-" + File + "-" + Target + "-" + Platform + ".ModificationTime");
+                        if (CachedModTime == System.IO.File.GetLastWriteTimeUtc(File).ToBinary().ToString())
+                        {
+                            foreach (SourceFile s in Dependancies)
+                            {
+                                if (s.Modified)
+                                {
+                                    return true;
+                                }
+                            }
+                            // If it made it this far, then
+                            // it and it's dependancies haven't
+                            // been modified.
+                            return false;
+                        }
+                        else
+                        {
+                            return true;
+                        }
+                    }
+                    else
+                    {
+                        return true;
+                    }
+                }
+                else
+                {
+                    return true;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The configuration for a single target.
+    /// </summary>
+    [Serializable]
     public class TargetConfiguration
     {
         /// <summary>
@@ -20,12 +227,16 @@ namespace OMake
         /// <summary>
         /// The actual things to do.
         /// </summary>
-        public List<string> Statements = new List<string>();
+        public List<Statement> Statements = new List<Statement>();
 
+        /// <summary>
+        /// The lists of dependancies.
+        /// </summary>
+        public Dictionary<string, List<string>> TargetDependancyLists = new Dictionary<string, List<string>>();
         /// <summary>
         /// The lists of sources specific to the target.
         /// </summary>
-        public Dictionary<string, List<string>> TargetSources = new Dictionary<string, List<string>>();
+        public Dictionary<string, List<SourceFile>> TargetSources = new Dictionary<string, List<SourceFile>>();
         /// <summary>
         /// The constants specific to the target.
         /// </summary>
@@ -39,6 +250,7 @@ namespace OMake
     /// <summary>
     /// The configuration for a single platform.
     /// </summary>
+    [Serializable]
     public class PlatformConfiguration
     {
         /// <summary>
@@ -52,12 +264,17 @@ namespace OMake
         /// <summary>
         /// Source overrides for this platform.
         /// </summary>
-        public Dictionary<string, List<string>> Sources = new Dictionary<string, List<string>>();
+        public Dictionary<string, List<SourceFile>> Sources = new Dictionary<string, List<SourceFile>>();
+        /// <summary>
+        /// Dependancy list overrides for this platform.
+        /// </summary>
+        public Dictionary<string, List<string>> DependancyLists = new Dictionary<string, List<string>>();
     }
 
 	/// <summary>
 	/// An overall configuration.
 	/// </summary>
+    [Serializable]
 	public class Configuration
 	{
         /// <summary>
@@ -78,9 +295,13 @@ namespace OMake
         public Dictionary<string, TargetConfiguration> Targets = new Dictionary<string, TargetConfiguration>();
 
         /// <summary>
+        /// The lists of dependancies.
+        /// </summary>
+        public Dictionary<string, List<string>> GlobalDependancyLists = new Dictionary<string, List<string>>();
+        /// <summary>
         /// The globally registered lists of sources.
         /// </summary>
-        public Dictionary<string, List<string>> GlobalSources = new Dictionary<string, List<string>>();
+        public Dictionary<string, List<SourceFile>> GlobalSources = new Dictionary<string, List<SourceFile>>();
         /// <summary>
         /// The globally registered constants.
         /// </summary>
@@ -165,7 +386,7 @@ namespace OMake
             }
         }
 
-        public List<string> ResolveSource(string platform, string target, string srcName)
+        public List<SourceFile> ResolveSource(string platform, string target, string srcName)
         {
             if (!Targets.ContainsKey(target))
             {

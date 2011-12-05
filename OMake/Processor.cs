@@ -44,18 +44,19 @@ namespace OMake
         {
 #if USING_ANTLR
 
-            OMakeLexer lx = new OMakeLexer(stin.BaseStream);
+            ANTLRInputStream instrm = new ANTLRInputStream(stin.BaseStream);
+            OMakeLexer lx = new OMakeLexer(instrm);
             CommonTokenStream tokens = new CommonTokenStream(lx);
             OMakeParser parser = new OMakeParser(tokens);
             try
             {
-                parser.expr();
+                parser.main();
             }
             catch (RecognitionException e)
             {
-                Console.Error.WriteLine(e.StackTrace);
+                Console.WriteLine(e.StackTrace);
             }
-
+            throw new Exception();
 #else
 
             #region Process File
@@ -82,7 +83,7 @@ namespace OMake
                     }
                     else
                     {
-                        Config.Targets["all"].Statements.Add(buf);
+                        Config.Targets["all"].Statements.Add(new Statement(buf));
                     }
                 }
             }
@@ -202,7 +203,13 @@ namespace OMake
                             }
                             #endregion
 
-                            List<string> Sources = new List<string>(Config.GlobalSources[SourceListName]);
+                            List<SourceFile> Srces = new List<SourceFile>(Config.ResolveSource("WIN32", "all", SourceListName));
+                            List<SourceFile> Sources = new List<SourceFile>();
+
+                            foreach (SourceFile s in Srces)
+                            {
+                                Sources.Add(new SourceFile(s.File, s.Target, s.Platform, s.Dependancies));
+                            }
 
                             if (prefixes != null)
                             {
@@ -217,10 +224,14 @@ namespace OMake
                                 ProcessCommon_Suffix(ref buf, suffixes, ref Sources);
                             }
 
+                            int indxs = 0;
                             // Now we can emit the expanded version.
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                Config.Targets["all"].Statements.Add(baseCommand + s);
+                                List<SourceFile> sr = new List<SourceFile>();
+                                sr.Add(Srces[indxs]);
+                                Config.Targets["all"].Statements.Add(new Statement(baseCommand + s.File, sr));
+                                indxs++;
                             }
 
                             // And now a bit of cleanup
@@ -254,7 +265,7 @@ namespace OMake
         #endregion
 
         #region Process Common - Prefix
-        private void ProcessCommon_Prefix(ref string buf, List<string> prefixes, ref List<string> Sources)
+        private void ProcessCommon_Prefix(ref string buf, List<string> prefixes, ref List<SourceFile> Sources)
         {
             foreach (string prefix in prefixes)
             {
@@ -269,12 +280,10 @@ namespace OMake
                         if (buf.ToLower().StartsWith("all"))
                         {
                             #region Process All
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                newSourceList.Add(ProcessCommon_ProcessBuiltinConstant(ref buf, prefixCommand, s) + " " + s);
+                                s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, prefixCommand, s.File) + " " + s.File;
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("filename"))
@@ -282,19 +291,13 @@ namespace OMake
                             #region Process Filename
                             string TheFilename = ProcessCommon_ExtractFilename(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (s.Trim() == TheFilename)
+                                if (s.File.Trim() == TheFilename)
                                 {
-                                    newSourceList.Add(ProcessCommon_ProcessBuiltinConstant(ref buf, prefixCommand, s) + " " + s);
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, prefixCommand, s.File) + " " + s.File;
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("wildcard"))
@@ -302,19 +305,13 @@ namespace OMake
                             #region Process Wildcard
                             string TheWildcard = ProcessCommon_ExtractWildcard(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.Trim()))
+                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.File.Trim()))
                                 {
-                                    newSourceList.Add(ProcessCommon_ProcessBuiltinConstant(ref buf, prefixCommand, s) + " " + s);
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, prefixCommand, s.File) + " " + s.File;
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("regex"))
@@ -322,19 +319,13 @@ namespace OMake
                             #region Process Regex
                             string TheRegex = ProcessCommon_ExtractRegex(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.Trim()))
+                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.File.Trim()))
                                 {
-                                    newSourceList.Add(ProcessCommon_ProcessBuiltinConstant(ref buf, prefixCommand, s) + " " + s);
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, prefixCommand, s.File) + " " + s.File;
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else
@@ -359,12 +350,10 @@ namespace OMake
                         if (buf.ToLower().StartsWith("all"))
                         {
                             #region Process All
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                newSourceList.Add(prefixCommand + " " + s);
+                                s.File = prefixCommand + " " + s.File;
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("filename"))
@@ -372,19 +361,13 @@ namespace OMake
                             #region Process Filename
                             string TheFilename = ProcessCommon_ExtractFilename(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (s.Trim() == TheFilename)
+                                if (s.File.Trim() == TheFilename)
                                 {
-                                    newSourceList.Add(prefixCommand + " " + s);
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = prefixCommand + " " + s.File;
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("wildcard"))
@@ -392,19 +375,13 @@ namespace OMake
                             #region Process Wildcard
                             string TheWildcard = ProcessCommon_ExtractWildcard(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.Trim()))
+                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.File.Trim()))
                                 {
-                                    newSourceList.Add(prefixCommand + " " + s);
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = prefixCommand + " " + s.File;
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("regex"))
@@ -412,19 +389,13 @@ namespace OMake
                             #region Process Regex
                             string TheRegex = ProcessCommon_ExtractRegex(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.Trim()))
+                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.File.Trim()))
                                 {
-                                    newSourceList.Add(prefixCommand + " " + s);
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = prefixCommand + " " + s.File;
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else
@@ -443,7 +414,7 @@ namespace OMake
         #endregion
 
         #region Process Common - Filename
-        private void ProcessCommon_Filename(ref string buf, List<string> filenames, ref List<string> Sources)
+        private void ProcessCommon_Filename(ref string buf, List<string> filenames, ref List<SourceFile> Sources)
         {
             foreach (string filename in filenames)
             {
@@ -458,12 +429,10 @@ namespace OMake
                         if (buf.ToLower().StartsWith("all"))
                         {
                             #region Process All
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                newSourceList.Add(" " + ProcessCommon_ProcessBuiltinConstant(ref buf, filenameCommand, s));
+                                s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, filenameCommand, s.File);
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("filename"))
@@ -471,19 +440,13 @@ namespace OMake
                             #region Process Filename
                             string TheFilename = ProcessCommon_ExtractFilename(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (s.Trim() == TheFilename)
+                                if (s.File.Trim() == TheFilename)
                                 {
-                                    newSourceList.Add(" " + ProcessCommon_ProcessBuiltinConstant(ref buf, filenameCommand, s));
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, filenameCommand, s.File);
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("wildcard"))
@@ -491,19 +454,13 @@ namespace OMake
                             #region Process Wildcard
                             string TheWildcard = ProcessCommon_ExtractWildcard(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.Trim()))
+                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.File.Trim()))
                                 {
-                                    newSourceList.Add(" " + ProcessCommon_ProcessBuiltinConstant(ref buf, filenameCommand, s));
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, filenameCommand, s.File);
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("regex"))
@@ -511,19 +468,13 @@ namespace OMake
                             #region Process Regex
                             string TheRegex = ProcessCommon_ExtractRegex(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.Trim()))
+                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.File.Trim()))
                                 {
-                                    newSourceList.Add(" " + ProcessCommon_ProcessBuiltinConstant(ref buf, filenameCommand, s));
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, filenameCommand, s.File);
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else
@@ -548,12 +499,10 @@ namespace OMake
                         if (buf.ToLower().StartsWith("all"))
                         {
                             #region Process All
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                newSourceList.Add(" " + filenameCommand);
+                                s.File = filenameCommand;
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("filename"))
@@ -561,19 +510,13 @@ namespace OMake
                             #region Process Filename
                             string TheFilename = ProcessCommon_ExtractFilename(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (s.Trim() == TheFilename)
+                                if (s.File.Trim() == TheFilename)
                                 {
-                                    newSourceList.Add(" " + filenameCommand);
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = filenameCommand;
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("wildcard"))
@@ -581,19 +524,13 @@ namespace OMake
                             #region Process Wildcard
                             string TheWildcard = ProcessCommon_ExtractWildcard(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.Trim()))
+                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.File.Trim()))
                                 {
-                                    newSourceList.Add(" " + filenameCommand);
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = filenameCommand;
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("regex"))
@@ -601,19 +538,13 @@ namespace OMake
                             #region Process Regex
                             string TheRegex = ProcessCommon_ExtractRegex(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.Trim()))
+                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.File.Trim()))
                                 {
-                                    newSourceList.Add(" " + filenameCommand);
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = filenameCommand;
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else
@@ -632,7 +563,7 @@ namespace OMake
         #endregion
 
         #region Process Common - Suffix
-        private void ProcessCommon_Suffix(ref string buf, List<string> suffixes, ref List<string> Sources)
+        private void ProcessCommon_Suffix(ref string buf, List<string> suffixes, ref List<SourceFile> Sources)
         {
             foreach (string suffix in suffixes)
             {
@@ -647,12 +578,10 @@ namespace OMake
                         if (buf.ToLower().StartsWith("all"))
                         {
                             #region Process All
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                newSourceList.Add(s + " " + ProcessCommon_ProcessBuiltinConstant(ref buf, suffixCommand, s));
+                                s.File = s.File + " " + ProcessCommon_ProcessBuiltinConstant(ref buf, suffixCommand, s.File);
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("filename"))
@@ -660,19 +589,13 @@ namespace OMake
                             #region Process Filename
                             string TheFilename = ProcessCommon_ExtractFilename(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (s.Trim() == TheFilename)
+                                if (s.File.Trim() == TheFilename)
                                 {
-                                    newSourceList.Add(s + " " + ProcessCommon_ProcessBuiltinConstant(ref buf, suffixCommand, s));
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = s.File + " " + ProcessCommon_ProcessBuiltinConstant(ref buf, suffixCommand, s.File);
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("wildcard"))
@@ -680,19 +603,13 @@ namespace OMake
                             #region Process Wildcard
                             string TheWildcard = ProcessCommon_ExtractWildcard(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.Trim()))
+                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.File.Trim()))
                                 {
-                                    newSourceList.Add(s + " " + ProcessCommon_ProcessBuiltinConstant(ref buf, suffixCommand, s));
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = s.File + " " + ProcessCommon_ProcessBuiltinConstant(ref buf, suffixCommand, s.File);
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("regex"))
@@ -700,19 +617,13 @@ namespace OMake
                             #region Process Regex
                             string TheRegex = ProcessCommon_ExtractRegex(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.Trim()))
+                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.File.Trim()))
                                 {
-                                    newSourceList.Add(s + " " + ProcessCommon_ProcessBuiltinConstant(ref buf, suffixCommand, s));
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = s.File + " " + ProcessCommon_ProcessBuiltinConstant(ref buf, suffixCommand, s.File);
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else
@@ -737,12 +648,10 @@ namespace OMake
                         if (buf.ToLower().StartsWith("all"))
                         {
                             #region Process All
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                newSourceList.Add(s + " " + filenameCommand);
+                                s.File = s.File + " " + filenameCommand;
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("filename"))
@@ -750,19 +659,13 @@ namespace OMake
                             #region Process Filename
                             string TheFilename = ProcessCommon_ExtractFilename(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (s.Trim() == TheFilename)
+                                if (s.File.Trim() == TheFilename)
                                 {
-                                    newSourceList.Add(s + " " + filenameCommand);
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = s.File + " " + filenameCommand;
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("wildcard"))
@@ -770,19 +673,13 @@ namespace OMake
                             #region Process Wildcard
                             string TheWildcard = ProcessCommon_ExtractWildcard(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.Trim()))
+                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.File.Trim()))
                                 {
-                                    newSourceList.Add(s + " " + filenameCommand);
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = s.File + " " + filenameCommand;
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else if (buf.ToLower().StartsWith("regex"))
@@ -790,19 +687,13 @@ namespace OMake
                             #region Process Regex
                             string TheRegex = ProcessCommon_ExtractRegex(ref buf);
 
-                            List<string> newSourceList = new List<string>();
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.Trim()))
+                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.File.Trim()))
                                 {
-                                    newSourceList.Add(s + " " + filenameCommand);
-                                }
-                                else
-                                {
-                                    newSourceList.Add(s);
+                                    s.File = s.File + " " + filenameCommand;
                                 }
                             }
-                            Sources = newSourceList;
                             #endregion
                         }
                         else
@@ -930,8 +821,37 @@ namespace OMake
 
         #endregion
 
+
+        #region Process Define Source - Source Lines
+        private List<SourceFile> Process_Define_Source_SourceLines(List<string> lines, string target)
+        {
+            List<SourceFile> FinalSources = new List<SourceFile>();
+            foreach (string s in lines)
+            {
+                if (s.Contains(":"))
+                {
+                    string flname = s.Split(':')[0].Trim();
+                    string buf = s.Substring(s.IndexOf(':') + 1).Trim();
+                    List<string> dependancies = new List<string>(buf.Split(','));
+                    List<SourceFile> deps = new List<SourceFile>();
+                    foreach (string dp in dependancies)
+                    {
+                        deps.Add(new SourceFile(dp.Trim(), target));
+                    }
+                    FinalSources.Add(new SourceFile(flname, "all", deps));
+                }
+                else
+                {
+                    FinalSources.Add(new SourceFile(s.Trim(), "all"));
+                }
+            }
+            return FinalSources;
+        }
+        #endregion
+
         #region Process Define
 
+        #region Process Define
         private string ProcessDefine(string buf)
         {
             buf = buf.Substring(8).Trim();
@@ -965,6 +885,7 @@ namespace OMake
             }
             return buf;
         }
+        #endregion
 
         #region Process Define Mangler
         private string ProcessDefineMangler(string buf)
@@ -1061,7 +982,7 @@ namespace OMake
                     }
                     else
                     {
-                        Config.GlobalSources.Add(sourceName, sources);
+                        Config.GlobalSources.Add(sourceName, Process_Define_Source_SourceLines(sources, "all"));
                     }
                 }
             }
@@ -1333,7 +1254,8 @@ namespace OMake
                                 }
                                 else
                                 {
-                                    Config.Targets[Target].Statements.Add(buf.Trim());
+#warning We could probably attempt to extract some filenames from this at some point.
+                                    Config.Targets[Target].Statements.Add(new Statement(buf.Trim()));
                                 }
                             }
                         }
@@ -1496,7 +1418,7 @@ namespace OMake
                     }
                     else
                     {
-                        Config.Targets[target].TargetSources.Add(sourceName, sources);
+                        Config.Targets[target].TargetSources.Add(sourceName, Process_Define_Source_SourceLines(sources, target));
                     }
                 }
             }
@@ -1721,7 +1643,14 @@ namespace OMake
                             #endregion
 
 #warning Give correct location when we support platform specific sources.
-                            List<string> Sources = new List<string>(Config.ResolveSource("WIN32", target, SourceListName));
+
+                            List<SourceFile> Srces = new List<SourceFile>(Config.ResolveSource("WIN32", target, SourceListName));
+                            List<SourceFile> Sources = new List<SourceFile>();
+
+                            foreach (SourceFile s in Srces)
+                            {
+                                Sources.Add(new SourceFile(s.File, s.Target, s.Platform, s.Dependancies));
+                            }
 
                             if (prefixes != null)
                             {
@@ -1736,10 +1665,15 @@ namespace OMake
                                 ProcessCommon_Suffix(ref buf, suffixes, ref Sources);
                             }
 
+
+                            int indxs = 0;
                             // Now we can emit the expanded version.
-                            foreach (string s in Sources)
+                            foreach (SourceFile s in Sources)
                             {
-                                Config.Targets[target].Statements.Add(baseCommand + s);
+                                List<SourceFile> sr = new List<SourceFile>();
+                                sr.Add(Srces[indxs]);
+                                Config.Targets[target].Statements.Add(new Statement(baseCommand + s.File, sr));
+                                indxs++;
                             }
 
                             // And now a bit of cleanup
