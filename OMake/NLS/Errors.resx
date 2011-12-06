@@ -341,4 +341,22 @@
   <data name="00090" xml:space="preserve">
     <value>Cache file version is newer than is supported! Max version supported is '{0}' cache file version is '{1}'.</value>
   </data>
+  <data name="00094" xml:space="preserve">
+    <value>File already exists! '{0}'</value>
+  </data>
+  <data name="00095" xml:space="preserve">
+    <value>File doesn't exist! '{0}'</value>
+  </data>
+  <data name="00096" xml:space="preserve">
+    <value>Syntax error while declaring file statement! Expected '{0}'!</value>
+  </data>
+  <data name="00097" xml:space="preserve">
+    <value>Unknown file statement type '{0}'!</value>
+  </data>
+  <data name="00098" xml:space="preserve">
+    <value>Syntax error while declaring file statement! Expected '{0}' Got '{1}'!</value>
+  </data>
+  <data name="00099" xml:space="preserve">
+    <value>Unexpected end of file while declaring file statement!</value>
+  </data>
 </root>

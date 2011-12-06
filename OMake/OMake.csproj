@@ -24,7 +24,7 @@
     <UseVSHostingProcess>true</UseVSHostingProcess>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release|x86' ">
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <OutputPath>bin\x86\Release\</OutputPath>
     <DebugSymbols>False</DebugSymbols>
     <DebugType>None</DebugType>
@@ -33,12 +33,20 @@
     <DefineConstants>TRACE</DefineConstants>
     <PlatformTarget>x86</PlatformTarget>
     <UseVSHostingProcess>false</UseVSHostingProcess>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Configuration.cs" />
+    <Compile Include="Configuration\Configuration.cs" />
+    <Compile Include="Configuration\FileStatement.cs" />
+    <Compile Include="Configuration\FileStatementType.cs" />
+    <Compile Include="Configuration\PlatformConfiguration.cs" />
+    <Compile Include="Configuration\SourceFile.cs" />
+    <Compile Include="Configuration\Statement.cs" />
+    <Compile Include="Configuration\StatementType.cs" />
+    <Compile Include="Configuration\TargetConfiguration.cs" />
     <Compile Include="Helpers.cs" />
     <Compile Include="ManglerLanguage\CSharpManglerLanguage.cs" />
     <Compile Include="ManglerLanguage\IManglerLanguage.cs" />

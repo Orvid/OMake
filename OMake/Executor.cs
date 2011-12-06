@@ -1,5 +1,6 @@
-﻿#define NO_EXECUTE // If this is defined we don't do the actual execution of the makefile.
-
+﻿#if DEBUG
+//#define NO_EXECUTE // If this is defined we don't do the actual execution of the makefile.
+#endif
 using System;
 using System.IO;
 using System.Threading;
@@ -51,20 +52,26 @@ namespace OMake
             this.Config = proc.Config;
         }
 
+        #region Resolve Tools
         private void ResolveTools(string platform, string target)
         {
             foreach (Statement st in Config.Targets[target].Statements)
             {
-                string s = st.StatementValue;
-                string tmps = s.Trim();
-                string tool = s.Trim().Substring(0, s.Trim().IndexOf(' ')).Trim();
-                tool = Config.GetTool(platform, target, tool);
-                tool = Path.GetFullPath(tool);
-                string args = s.Trim().Substring(s.Trim().IndexOf(' ')).Trim();
-                st.StatementValue = tool.Trim() + "|" + args.Trim();
+                if (st.Type == StatementType.Standard)
+                {
+                    string s = st.StatementValue;
+                    string tmps = s.Trim();
+                    string tool = s.Trim().Substring(0, s.Trim().IndexOf(' ')).Trim();
+                    tool = Config.GetTool(platform, target, tool);
+                    tool = Path.GetFullPath(tool);
+                    string args = s.Trim().Substring(s.Trim().IndexOf(' ')).Trim();
+                    st.StatementValue = tool.Trim() + "|" + args.Trim();
+                }
             }
         }
+        #endregion
 
+        #region Final Decomp
         public void FinalDecomp(string platform, List<string> targets)
         {
             foreach (string target in targets)
@@ -73,6 +80,7 @@ namespace OMake
                 ResolveTools(platform, target);
             }
         }
+        #endregion
 
         public void Execute(string platform, List<string> targets)
         {
@@ -95,20 +103,147 @@ namespace OMake
 
                 foreach (Statement st in Config.Targets[target].Statements)
                 {
-                    if (st.Modified)
+                    if (ErrorManager.ErrorCount > 0)
                     {
-                        string s = st.StatementValue;
-                        if (s.Trim() != "")
-                        {
-                            ProcessStartInfo psi = new ProcessStartInfo(s.Substring(0, s.IndexOf('|')), s.Substring(s.IndexOf('|') + 1).Trim());
-                            psi.UseShellExecute = false;
-                            psi.RedirectStandardOutput = true;
-                            psi.RedirectStandardError = true;
+                        ErrorManager.Error(54, Processor.file);
+                        return;
+                    }
+
+                    switch (st.Type)
+                    {
+                        case StatementType.File:
+                            #region File Statement
+                            FileStatement stmt = (FileStatement)st;
+                            switch (stmt.Type)
+                            {
+                                case FileStatementType.Create:
+                                    if (File.Exists(stmt.Filename))
+                                    {
+                                        ErrorManager.Error(94, Processor.file, stmt.Filename);
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        StreamWriter f = File.CreateText(stmt.Filename);
+                                        f.Write(DecomposeString(stmt.Arg1, platform, target));
+                                        f.Flush();
+                                        f.Close();
+                                    }
+                                    break;
+                                case FileStatementType.CreateOrTruncate:
+                                    if (File.Exists(stmt.Filename))
+                                    {
+                                        StreamWriter f = new StreamWriter(stmt.Filename);
+                                        f.BaseStream.Position = 0;
+                                        f.BaseStream.SetLength(0);
+                                        f.Write(DecomposeString(stmt.Arg1, platform, target));
+                                        f.Flush();
+                                        f.Close();
+                                    }
+                                    else
+                                    {
+                                        StreamWriter f = File.CreateText(stmt.Filename);
+                                        f.Write(DecomposeString(stmt.Arg1, platform, target));
+                                        f.Flush();
+                                        f.Close();
+                                    }
+                                    break;
+                                case FileStatementType.Append:
+                                    if (File.Exists(stmt.Filename))
+                                    {
+                                        StreamWriter f = new StreamWriter(stmt.Filename, true);
+                                        f.Write(DecomposeString(stmt.Arg1, platform, target));
+                                        f.Flush();
+                                        f.Close();
+                                    }
+                                    else
+                                    {
+                                        ErrorManager.Error(95, Processor.file, stmt.Filename);
+                                        return;
+                                    }
+                                    break;
+                                case FileStatementType.CreateOrAppend:
+                                    if (File.Exists(stmt.Filename))
+                                    {
+                                        StreamWriter f = new StreamWriter(stmt.Filename, true);
+                                        f.Write(DecomposeString(stmt.Arg1, platform, target));
+                                        f.Flush();
+                                        f.Close();
+                                    }
+                                    else
+                                    {
+                                        StreamWriter f = File.CreateText(stmt.Filename);
+                                        f.Write(DecomposeString(stmt.Arg1, platform, target));
+                                        f.Flush();
+                                        f.Close();
+                                    }
+                                    break;
+                                case FileStatementType.Delete:
+                                    if (File.Exists(stmt.Filename))
+                                    {
+                                        File.Delete(stmt.Filename);
+                                    }
+                                    else
+                                    {
+                                        ErrorManager.Error(94, Processor.file, stmt.Filename);
+                                    }
+                                    break;
+                                case FileStatementType.TryDelete:
+                                    if (File.Exists(stmt.Filename))
+                                    {
+                                        File.Delete(stmt.Filename);
+                                    }
+                                    break;
+                                case FileStatementType.Copy:
+                                    if (File.Exists(stmt.Filename))
+                                    {
+                                        if (File.Exists(stmt.Arg1))
+                                        {
+                                            ErrorManager.Error(94, Processor.file, stmt.Arg1);
+                                            return;
+                                        }
+                                        File.Copy(stmt.Filename, stmt.Arg1);
+                                    }
+                                    else
+                                    {
+                                        ErrorManager.Error(94, Processor.file, stmt.Filename);
+                                        return;
+                                    }
+                                    break;
+                                case FileStatementType.ForceCopy:
+                                    if (File.Exists(stmt.Filename))
+                                    {
+                                        File.Copy(stmt.Filename, stmt.Arg1, true);
+                                    }
+                                    else
+                                    {
+                                        ErrorManager.Error(94, Processor.file, stmt.Filename);
+                                        return;
+                                    }
+                                    break;
+                                default:
+                                    throw new Exception("Well, an error definately occurred, because this shouldn't ever be getting called.");
+                            }
+
+                            #endregion
+                            break;
+
+                        case StatementType.Standard:
+                            #region Normal Statement
+                            if (st.Modified)
+                            {
+                                string s = st.StatementValue;
+                                if (s.Trim() != "")
+                                {
+                                    ProcessStartInfo psi = new ProcessStartInfo(s.Substring(0, s.IndexOf('|')), s.Substring(s.IndexOf('|') + 1).Trim());
+                                    psi.UseShellExecute = false;
+                                    psi.RedirectStandardOutput = true;
+                                    psi.RedirectStandardError = true;
 #if NO_EXECUTE
-                            Process p = new Process();
-                            p.StartInfo = psi;
-                            Console.WriteLine("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments);
-                            Log.WriteLine(string.Format("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments));
+                                    Process p = new Process();
+                                    p.StartInfo = psi;
+                                    Console.WriteLine("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments);
+                                    Log.WriteLine(string.Format("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments));
 #else
                             Process p = new Process();
                             p.StartInfo = psi;
@@ -126,12 +261,15 @@ namespace OMake
                                 return;
                             }
 #endif
-                        }
-                        st.SetCache();
-                    }
-                    else
-                    {
-                        Log.WriteLine("Dependancies not modified, so not executing statement '" + st.StatementValue + "'.");
+                                }
+                                st.SetCache();
+                            }
+                            else
+                            {
+                                Log.WriteLine("Dependancies not modified, so not executing statement '" + st.StatementValue + "'.");
+                            }
+                            #endregion
+                            break;
                     }
                 }
             }
@@ -145,106 +283,115 @@ namespace OMake
             }
         }
 
+        #region Decompose String
+        private string DecomposeString(string str, string plat, string target)
+        {
+            string tmp = str;
+            string buf = "";
+        BeforeResolve:
+            foreach (Match m in CustomConstant_Regex.Matches(tmp))
+            {
+                #region Custom Constant
+                buf = m.Value.Substring(1).Trim();
+                buf = buf.Substring(1).Trim();
+                buf = buf.Substring(0, buf.Length - 1).Trim();
+                // It's now a valid constant (or it should be)
+                tmp = tmp.Replace(m.Value, Config.GetConstant(plat, target, buf));
+                #endregion
+            }
+            if (CustomConstant_Regex.IsMatch(tmp))
+                goto BeforeResolve;
+        BeforeInnerListResolve:
+            // This has to be done after the custom 
+            // constants are replaced, otherwise it
+            // will include the constants in the match.
+            if (InnerList_Regex.IsMatch(tmp))
+            {
+                #region Inner List
+                // Fun, fun, we get to expand a nice list
+                buf = InnerList_Regex.Match(tmp).Value.Trim();
+                buf = buf.Substring(1).Trim();
+                // We need 2 statments here because whitespaces
+                // are allowed in between the characters.
+                buf = buf.Substring(1).Trim();
+                buf = buf.Substring(0, buf.Length - 1).Trim();
+                // We've now have removed the brackets around it.
+                // We need the location of the list now.
+                int indx = buf.IndexOf(InnerInnerList_Regex.Match(tmp).Value);
+                // And use this to grab the prefix.
+                string prefix = buf.Substring(0, indx);
+                // And the list itself.
+                string innerLst = InnerInnerList_Regex.Match(tmp).Value;
+                // Followed by the suffix.
+                string suffix = buf.Substring(indx + innerLst.Length);
+                List<StringMangler> ManglersToApply = new List<StringMangler>();
+                string innerinnerLst = InnerInnerInnerList_Regex.Match(innerLst).Value.Trim();
+                innerinnerLst = innerinnerLst.Substring(1).Trim();
+                innerinnerLst = innerinnerLst.Substring(0, innerinnerLst.Length - 1).Trim();
+                // Now we have the actual name of the list.
+                List<SourceFile> srces = Config.ResolveSource(plat, target, innerinnerLst);
+                innerLst = innerLst.Substring(2).Trim();
+                innerLst = innerLst.Substring(1).Trim();
+                innerLst = innerLst.Substring(innerinnerLst.Length).Trim();
+                innerLst = innerLst.Substring(1).Trim();
+                innerLst = innerLst.Substring(1).Trim();
+                innerLst = innerLst.Substring(0, innerLst.Length - 1).Trim();
+                // We now have just the manglings.
+                foreach (string strng in innerLst.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (Processor.ValidManglers.ContainsKey(strng.ToLower()))
+                    {
+                        ManglersToApply.Add(Processor.ValidManglers[strng.ToLower()]);
+                    }
+                    else
+                    {
+                        throw new Exception("Unknown Mangler '" + strng + "'!");
+                    }
+                }
+                List<string> finalNames = new List<string>();
+                foreach (SourceFile sf in srces)
+                {
+                    string strng = sf.File;
+                    string bfr = strng;
+                    foreach (StringMangler strmglr in ManglersToApply)
+                    {
+                        bfr = strmglr(bfr);
+                    }
+                    finalNames.Add(prefix + bfr + suffix);
+                }
+                string finalReplaced = "";
+                bool first = true;
+                foreach (string strng in finalNames)
+                {
+                    if (first)
+                    {
+                        finalReplaced = strng;
+                        first = false;
+                    }
+                    else
+                    {
+                        finalReplaced += " " + strng;
+                    }
+                }
+                tmp = tmp.Replace(InnerList_Regex.Match(tmp).Value, finalReplaced);
+                #endregion
+            }
+            if (InnerList_Regex.IsMatch(tmp))
+                goto BeforeInnerListResolve;
+            return tmp;
+        }
+        #endregion
+
+        #region Final Decompisition
         private void FinalDecompisition(string plat, string target)
         {
             foreach (Statement st in Config.Targets[target].Statements)
             {
-                string s = st.StatementValue;
-                string tmp = s;
-                string buf = "";
-            BeforeResolve:
-                foreach (Match m in CustomConstant_Regex.Matches(tmp))
-                {
-                    #region Custom Constant
-                    buf = m.Value.Substring(1).Trim();
-                    buf = buf.Substring(1).Trim();
-                    buf = buf.Substring(0, buf.Length - 1).Trim();
-                    // It's now a valid constant (or it should be)
-                    tmp = tmp.Replace(m.Value, Config.GetConstant(plat, target, buf));
-                    #endregion
-                }
-                if (CustomConstant_Regex.IsMatch(tmp))
-                    goto BeforeResolve;
-            BeforeInnerListResolve:
-                // This has to be done after the custom 
-                // constants are replaced, otherwise it
-                // will include the constants in the match.
-                if (InnerList_Regex.IsMatch(tmp))
-                {
-                    #region Inner List
-                    // Fun, fun, we get to expand a nice list
-                    buf = InnerList_Regex.Match(tmp).Value.Trim();
-                    buf = buf.Substring(1).Trim();
-                    // We need 2 statments here because whitespaces
-                    // are allowed in between the characters.
-                    buf = buf.Substring(1).Trim();
-                    buf = buf.Substring(0, buf.Length - 1).Trim();
-                    // We've now have removed the brackets around it.
-                    // We need the location of the list now.
-                    int indx = buf.IndexOf(InnerInnerList_Regex.Match(tmp).Value);
-                    // And use this to grab the prefix.
-                    string prefix = buf.Substring(0, indx);
-                    // And the list itself.
-                    string innerLst = InnerInnerList_Regex.Match(tmp).Value;
-                    // Followed by the suffix.
-                    string suffix = buf.Substring(indx + innerLst.Length);
-                    List<StringMangler> ManglersToApply = new List<StringMangler>();
-                    string innerinnerLst = InnerInnerInnerList_Regex.Match(innerLst).Value.Trim();
-                    innerinnerLst = innerinnerLst.Substring(1).Trim();
-                    innerinnerLst = innerinnerLst.Substring(0, innerinnerLst.Length - 1).Trim();
-                    // Now we have the actual name of the list.
-                    List<SourceFile> srces = Config.ResolveSource(plat, target, innerinnerLst);
-                    innerLst = innerLst.Substring(2).Trim();
-                    innerLst = innerLst.Substring(1).Trim();
-                    innerLst = innerLst.Substring(innerinnerLst.Length).Trim();
-                    innerLst = innerLst.Substring(1).Trim();
-                    innerLst = innerLst.Substring(1).Trim();
-                    innerLst = innerLst.Substring(0, innerLst.Length - 1).Trim();
-                    // We now have just the manglings.
-                    foreach (string strng in innerLst.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries))
-                    {
-                        if (Processor.ValidManglers.ContainsKey(strng.ToLower()))
-                        {
-                            ManglersToApply.Add(Processor.ValidManglers[strng.ToLower()]);
-                        }
-                        else
-                        {
-                            throw new Exception("Unknown Mangler '" + strng + "'!");
-                        }
-                    }
-                    List<string> finalNames = new List<string>();
-                    foreach (SourceFile sf in srces)
-                    {
-                        string strng = sf.File;
-                        string bfr = strng;
-                        foreach (StringMangler strmglr in ManglersToApply)
-                        {
-                            bfr = strmglr(bfr);
-                        }
-                        finalNames.Add(prefix + bfr + suffix);
-                    }
-                    string finalReplaced = "";
-                    bool first = true;
-                    foreach (string strng in finalNames)
-                    {
-                        if (first)
-                        {
-                            finalReplaced = strng;
-                            first = false;
-                        }
-                        else
-                        {
-                            finalReplaced += " " + strng;
-                        }
-                    }
-                    tmp = tmp.Replace(InnerList_Regex.Match(tmp).Value, finalReplaced);
-                    #endregion
-                }
-                if (InnerList_Regex.IsMatch(tmp))
-                    goto BeforeInnerListResolve;
-                st.StatementValue = tmp;
+                st.StatementValue = DecomposeString(st.StatementValue, plat, target);
             }
-            
+
         }
+        #endregion
+
     }
 }

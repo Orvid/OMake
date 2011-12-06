@@ -1,4 +1,6 @@
-﻿#define UseLog // This causes the log to be used.
+﻿#if DEBUG
+//#define UseLog // This causes the log to be used.
+#endif
 using System;
 using System.IO;
 using System.Collections.Generic;
@@ -209,14 +211,9 @@ namespace OMake
             }
             strm.BaseStream.Position = 0;
 
-        HaveToReParse:
             if (NeedToReParse)
             {
                 prc.Process();
-            }
-            else
-            {
-
             }
             t.Stop();
             Log.WriteLine("Processing Time: '" + t.ElapsedMilliseconds.ToString() + "'");

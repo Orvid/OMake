@@ -69,6 +69,8 @@
 #   because your normally only dependant on header files,
 #   not on actual source files.
 #
+#   Also, as a note, # is a comment in a source block.
+#
     Kernel.c : KernelFile2.c, KernelFile3.c
 #
 #   I would cincerely hope you don't actually need to use 
@@ -85,9 +87,20 @@
 // Originally here to test custom manglers,
 // it is kept here to show how to define your
 // own custom mangler.
-#define MANGLER(C#, IT_WORKS, inString)
+//#define MANGLER(C#, IT_WORKS, inString)
+//{
+//    return "Huzzah! It works! Btw, the input string was '" + inString + "'.";
+//}
+
+file CREATE_OR_TRUNCATE(ASimpleTestFile.txt)
 {
-    return "Huzzah! It works! Btw, the input string was '" + inString + "'.";
+    Well, creating with trimming enabled works just fine.
+    Also, LD_ARGS is '${LD_ARGS}'
+}
+
+file APPEND(ASimpleTestFile.txt)
+{
+    Well, this means the appending with trimming enabled works just fine.
 }
 
 // Some people can't do a thing without targets,
