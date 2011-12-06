@@ -114,6 +114,8 @@ namespace OMake
                         case StatementType.File:
                             #region File Statement
                             FileStatement stmt = (FileStatement)st;
+                            stmt.Filename = DecomposeString(stmt.Filename, platform, target);
+                            stmt.Arg1 = DecomposeString(stmt.Arg1, platform, target);
                             switch (stmt.Type)
                             {
                                 case FileStatementType.Create:
@@ -125,7 +127,7 @@ namespace OMake
                                     else
                                     {
                                         StreamWriter f = File.CreateText(stmt.Filename);
-                                        f.Write(DecomposeString(stmt.Arg1, platform, target));
+                                        f.Write(stmt.Arg1);
                                         f.Flush();
                                         f.Close();
                                     }
@@ -136,14 +138,14 @@ namespace OMake
                                         StreamWriter f = new StreamWriter(stmt.Filename);
                                         f.BaseStream.Position = 0;
                                         f.BaseStream.SetLength(0);
-                                        f.Write(DecomposeString(stmt.Arg1, platform, target));
+                                        f.Write(stmt.Arg1);
                                         f.Flush();
                                         f.Close();
                                     }
                                     else
                                     {
                                         StreamWriter f = File.CreateText(stmt.Filename);
-                                        f.Write(DecomposeString(stmt.Arg1, platform, target));
+                                        f.Write(stmt.Arg1);
                                         f.Flush();
                                         f.Close();
                                     }
@@ -152,7 +154,7 @@ namespace OMake
                                     if (File.Exists(stmt.Filename))
                                     {
                                         StreamWriter f = new StreamWriter(stmt.Filename, true);
-                                        f.Write(DecomposeString(stmt.Arg1, platform, target));
+                                        f.Write(stmt.Arg1);
                                         f.Flush();
                                         f.Close();
                                     }
@@ -166,14 +168,14 @@ namespace OMake
                                     if (File.Exists(stmt.Filename))
                                     {
                                         StreamWriter f = new StreamWriter(stmt.Filename, true);
-                                        f.Write(DecomposeString(stmt.Arg1, platform, target));
+                                        f.Write(stmt.Arg1);
                                         f.Flush();
                                         f.Close();
                                     }
                                     else
                                     {
                                         StreamWriter f = File.CreateText(stmt.Filename);
-                                        f.Write(DecomposeString(stmt.Arg1, platform, target));
+                                        f.Write(stmt.Arg1);
                                         f.Flush();
                                         f.Close();
                                     }
