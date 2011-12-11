@@ -1,6 +1,4 @@
-﻿//#define USING_ANTLR
-
-using System;
+﻿using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -42,23 +40,6 @@ namespace OMake
 
         public void Process()
         {
-#if USING_ANTLR
-
-            ANTLRInputStream instrm = new ANTLRInputStream(stin.BaseStream);
-            OMakeLexer lx = new OMakeLexer(instrm);
-            CommonTokenStream tokens = new CommonTokenStream(lx);
-            OMakeParser parser = new OMakeParser(tokens);
-            try
-            {
-                parser.main();
-            }
-            catch (RecognitionException e)
-            {
-                Console.WriteLine(e.StackTrace);
-            }
-            throw new Exception();
-#else
-
             #region Process File
             string buf = "";
             while (!stin.EndOfStream)
@@ -107,14 +88,7 @@ namespace OMake
             }
             #endregion
 
-#endif
         }
-
-#if USING_ANTLR
-
-
-
-#else
 
         #region Process File
         private string ProcessFile(string bfr, string target)
@@ -123,20 +97,28 @@ namespace OMake
             string filename = "";
             FileStatementType tp;
             string arg1 = "";
-            if (buf.ToLower().StartsWith("create_or_truncate"))
+            if (buf.ToLower().StartsWith("create"))
             {
-                tp = FileStatementType.CreateOrTruncate;
-                buf = buf.Substring(18).Trim();
-            }
-            else if (buf.ToLower().StartsWith("create_or_append"))
-            {
-                tp = FileStatementType.CreateOrAppend;
-                buf = buf.Substring(16).Trim();
-            }
-            else if (buf.ToLower().StartsWith("create"))
-            {
-                tp = FileStatementType.Create;
                 buf = buf.Substring(6).Trim();
+                if (buf.ToLower().StartsWith("_or_truncate"))
+                {
+                    tp = FileStatementType.CreateOrTruncate;
+                    buf = buf.Substring(12).Trim();
+                }
+                else if (buf.ToLower().StartsWith("_or_append"))
+                {
+                    tp = FileStatementType.CreateOrAppend;
+                    buf = buf.Substring(10).Trim();
+                }
+                else if (buf.ToLower().StartsWith("("))
+                {
+                    tp = FileStatementType.Create;
+                }
+                else
+                {
+                    ErrorManager.Error(100, file, buf);
+                    return "";
+                }
             }
             else if (buf.ToLower().StartsWith("append"))
             {
@@ -148,20 +130,64 @@ namespace OMake
                 tp = FileStatementType.Delete;
                 buf = buf.Substring(6).Trim();
             }
-            else if (buf.ToLower().StartsWith("try_delete"))
-            {
-                tp = FileStatementType.TryDelete;
-                buf = buf.Substring(9).Trim();
-            }
             else if (buf.ToLower().StartsWith("copy"))
             {
                 tp = FileStatementType.Copy;
                 buf = buf.Substring(4).Trim();
             }
-            else if (buf.ToLower().StartsWith("force_copy"))
+            else if (buf.ToLower().StartsWith("try_"))
             {
-                tp = FileStatementType.ForceCopy;
-                buf = buf.Substring(10).Trim();
+                buf = buf.Substring(4).Trim();
+                if (buf.ToLower().StartsWith("delete"))
+                {
+                    tp = FileStatementType.TryDelete;
+                    buf = buf.Substring(6).Trim();
+                }
+                else if (buf.ToLower().StartsWith("copy"))
+                {
+                    tp = FileStatementType.TryCopy;
+                    buf = buf.Substring(4).Trim();
+                }
+                else if (buf.ToLower().StartsWith("move"))
+                {
+                    tp = FileStatementType.TryMove;
+                    buf = buf.Substring(4).Trim();
+                }
+                else if (buf.ToLower().StartsWith("rename"))
+                {
+                    tp = FileStatementType.TryRename;
+                    buf = buf.Substring(6).Trim();
+                }
+                else
+                {
+                    ErrorManager.Error(101, file, buf);
+                    return "";
+                }
+
+            }
+            else if (buf.ToLower().StartsWith("force_"))
+            {
+                buf = buf.Substring(6).Trim();
+                if (buf.ToLower().StartsWith("copy"))
+                {
+                    tp = FileStatementType.ForceCopy;
+                    buf = buf.Substring(4).Trim();
+                }
+                else if (buf.ToLower().StartsWith("move"))
+                {
+                    tp = FileStatementType.ForceMove;
+                    buf = buf.Substring(4).Trim();
+                }
+                else if (buf.ToLower().StartsWith("rename"))
+                {
+                    tp = FileStatementType.ForceRename;
+                    buf = buf.Substring(6).Trim();
+                }
+                else
+                {
+                    ErrorManager.Error(102, file, buf);
+                    return "";
+                }
             }
             else
             {
@@ -177,69 +203,103 @@ namespace OMake
             else
             {
                 buf = buf.Substring(1).Trim();
-                if (!buf.EndsWith(")"))
+                switch (tp)
                 {
-                    ErrorManager.Error(96, file, ")");
-                    return "";
+                    case FileStatementType.Append:
+                    case FileStatementType.Create:
+                    case FileStatementType.CreateOrAppend:
+                    case FileStatementType.CreateOrTruncate:
+                        if (!buf.EndsWith(")"))
+                        {
+                            ErrorManager.Error(96, file, ")");
+                            return "";
+                        }
+                        break;
+
+                    case FileStatementType.Copy:
+                    case FileStatementType.Delete:
+                    case FileStatementType.Move:
+                    case FileStatementType.Rename:
+                    case FileStatementType.ForceCopy:
+                    case FileStatementType.ForceMove:
+                    case FileStatementType.ForceRename:
+                    case FileStatementType.TryCopy:
+                    case FileStatementType.TryDelete:
+                    case FileStatementType.TryMove:
+                    case FileStatementType.TryRename:
+                        if (!buf.EndsWith(");"))
+                        {
+                            ErrorManager.Error(96, file, ");");
+                            return "";
+                        }
+                        break;
+
+                    default:
+                        throw new Exception("Unknown FileStatementType!");
                 }
-                else
+                buf = buf.Substring(0, buf.Length - 1).Trim();
+                // Extract the args
+                switch (tp)
                 {
-                    buf = buf.Substring(0, buf.Length - 1).Trim();
-                    // Extract the args
-                    switch (tp)
-                    {
-                        // These have an argument, not
-                        // just a filename.
-                        case FileStatementType.Copy:
-                        case FileStatementType.ForceCopy:
-                            filename = buf.Split(',')[0].Trim();
-                            arg1 = buf.Split(',')[1].Trim();
-                            break;
-                        default:
-                            filename = buf;
-                            break;
-                    }
-                    // Now read the data.
-                    switch (tp)
-                    {
-                        case FileStatementType.Append:
-                        case FileStatementType.Create:
-                        case FileStatementType.CreateOrAppend:
-                        case FileStatementType.CreateOrTruncate:
-                            buf = stin.ReadLine();
-                            file.LineNumber++;
-                            if (buf.Trim() != "{")
+                    // These have an argument, not
+                    // just a filename.
+                    case FileStatementType.Move:
+                    case FileStatementType.Copy:
+                    case FileStatementType.Rename:
+                    case FileStatementType.ForceCopy:
+                    case FileStatementType.ForceMove:
+                    case FileStatementType.ForceRename:
+                    case FileStatementType.TryCopy:
+                    case FileStatementType.TryMove:
+                    case FileStatementType.TryRename:
+                        filename = buf.Split(',')[0].Trim();
+                        arg1 = buf.Split(',')[1].Trim();
+                        break;
+                    default:
+                        filename = buf;
+                        break;
+                }
+                // Now read the data.
+                switch (tp)
+                {
+                    case FileStatementType.Append:
+                    case FileStatementType.Create:
+                    case FileStatementType.CreateOrAppend:
+                    case FileStatementType.CreateOrTruncate:
+                        buf = stin.ReadLine();
+                        file.LineNumber++;
+                        if (buf.Trim() != "{")
+                        {
+                            ErrorManager.Error(98, file, "{", buf);
+                            return "";
+                        }
+                        else
+                        {
+                            bool inFileBlock = true;
+                            while (inFileBlock && !stin.EndOfStream)
                             {
-                                ErrorManager.Error(98, file, "{", buf);
+                                buf = stin.ReadLine();
+                                file.LineNumber++;
+                                if (buf.Trim() == "}")
+                                {
+                                    inFileBlock = false;
+                                    break;
+                                }
+                                else
+                                {
+                                    arg1 += buf.Trim() + "\r\n";
+                                }
+                            }
+                            if (inFileBlock)
+                            {
+                                ErrorManager.Error(99, file);
                                 return "";
                             }
-                            else
-                            {
-                                bool inFileBlock = true;
-                                while (inFileBlock && !stin.EndOfStream)
-                                {
-                                    buf = stin.ReadLine();
-                                    file.LineNumber++;
-                                    if (buf.Trim() == "}")
-                                    {
-                                        inFileBlock = false;
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        arg1 += buf.Trim() + "\r\n";
-                                    }
-                                }
-                                if (inFileBlock)
-                                {
-                                    ErrorManager.Error(99, file);
-                                    return "";
-                                }
-                            }
-                            break;
-                    }
-                    Config.Targets[target].Statements.Add(new FileStatement(tp, filename, arg1));
+                        }
+                        break;
                 }
+                Config.Targets[target].Statements.Add(new FileStatement(tp, filename, arg1));
+
             }
             return buf;
         }
@@ -1037,7 +1097,7 @@ namespace OMake
                 }
                 else
                 {
-                    if ((buf = stin.ReadLine().Trim())!= "{")
+                    if ((buf = stin.ReadLine().Trim()) != "{")
                     {
                         ErrorManager.Error(51, file, buf);
                     }
@@ -1313,7 +1373,7 @@ namespace OMake
         #endregion
 
         #endregion
-        
+
         #region Process Define Target
 
         #region Process Target
@@ -1390,7 +1450,6 @@ namespace OMake
                                 }
                                 else
                                 {
-#warning We could probably attempt to extract some filenames from this at some point.
                                     Config.Targets[Target].Statements.Add(new Statement(buf.Trim()));
                                 }
                             }
@@ -1842,9 +1901,6 @@ namespace OMake
         #endregion
 
         #endregion
-
-#endif
-
 
     }
 }

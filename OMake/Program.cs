@@ -1,7 +1,4 @@
-﻿#if DEBUG
-//#define UseLog // This causes the log to be used.
-#endif
-using System;
+﻿using System;
 using System.IO;
 using System.Collections.Generic;
 

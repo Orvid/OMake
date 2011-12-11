@@ -17,6 +17,11 @@ namespace OMake
         /// A statement that does something
         /// with a file on disk.
         /// </summary>
-        File
+        File,
+        /// <summary>
+        /// A statement that does something
+        /// with a directory on disk.
+        /// </summary>
+        Directory,
     }
 }

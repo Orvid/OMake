@@ -359,4 +359,13 @@
   <data name="00099" xml:space="preserve">
     <value>Unexpected end of file while declaring file statement!</value>
   </data>
+  <data name="00100" xml:space="preserve">
+    <value>Unknown Create statement type '{0}'!</value>
+  </data>
+  <data name="00101" xml:space="preserve">
+    <value>Unknown Try statement type '{0}'!</value>
+  </data>
+  <data name="00102" xml:space="preserve">
+    <value>Unknown Force statement type '{0}'!</value>
+  </data>
 </root>

@@ -40,8 +40,7 @@ namespace OMake
             // The check is only here because I'm lazy when I type.
             if (args != null)
                 err = string.Format(err, args);
-            Console.WriteLine(fle.Filename + ":" + fle.LineNumber.ToString() + " " + errString + " OM" + errorNumber.ToString() + ": " + err);
-            Log.WriteLine(fle.Filename + ":" + fle.LineNumber.ToString() + " " + errString + " OM" + errorNumber.ToString() + ": " + err);
+            CConsole.WriteLine(fle.Filename + ":" + fle.LineNumber.ToString() + " " + errString + " OM" + errorNumber.ToString() + ": " + err);
             ErrorCount++;
         }
 
@@ -57,8 +56,7 @@ namespace OMake
             // The check is only here because I'm lazy when I type.
             if (args != null)
                 warn = string.Format(warn, args);
-            Console.WriteLine(fle.Filename + ":" + fle.LineNumber.ToString() + " " + warnString + " OM" + warningNumber.ToString() + ": " + warn);
-            Log.WriteLine(fle.Filename + ":" + fle.LineNumber.ToString() + " " + warnString + " OM" + warningNumber.ToString() + ": " + warn);
+            CConsole.WriteLine(fle.Filename + ":" + fle.LineNumber.ToString() + " " + warnString + " OM" + warningNumber.ToString() + ": " + warn);
             WarningCount++;
         }
     }

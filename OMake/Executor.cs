@@ -1,7 +1,4 @@
-﻿#if DEBUG
-//#define NO_EXECUTE // If this is defined we don't do the actual execution of the makefile.
-#endif
-using System;
+﻿using System;
 using System.IO;
 using System.Threading;
 using System.Collections.Generic;
@@ -101,7 +98,7 @@ namespace OMake
                 }
                 #endregion
 
-                foreach (Statement st in Config.Targets[target].Statements)
+                foreach (Statement statmnt in Config.Targets[target].Statements)
                 {
                     if (ErrorManager.ErrorCount > 0)
                     {
@@ -109,132 +106,361 @@ namespace OMake
                         return;
                     }
 
-                    switch (st.Type)
+                    switch (statmnt.Type)
                     {
-                        case StatementType.File:
-                            #region File Statement
-                            FileStatement stmt = (FileStatement)st;
-                            stmt.Filename = DecomposeString(stmt.Filename, platform, target);
-                            stmt.Arg1 = DecomposeString(stmt.Arg1, platform, target);
-                            switch (stmt.Type)
+                        case StatementType.Directory:
+                            #region Directory Statement
+                            DirectoryStatement dst = (DirectoryStatement)statmnt;
+                            switch (dst.Type)
                             {
-                                case FileStatementType.Create:
-                                    if (File.Exists(stmt.Filename))
-                                    {
-                                        ErrorManager.Error(94, Processor.file, stmt.Filename);
-                                        return;
-                                    }
-                                    else
-                                    {
-                                        StreamWriter f = File.CreateText(stmt.Filename);
-                                        f.Write(stmt.Arg1);
-                                        f.Flush();
-                                        f.Close();
-                                    }
+                                case DirectoryStatementType.Create:
                                     break;
-                                case FileStatementType.CreateOrTruncate:
-                                    if (File.Exists(stmt.Filename))
-                                    {
-                                        StreamWriter f = new StreamWriter(stmt.Filename);
-                                        f.BaseStream.Position = 0;
-                                        f.BaseStream.SetLength(0);
-                                        f.Write(stmt.Arg1);
-                                        f.Flush();
-                                        f.Close();
-                                    }
-                                    else
-                                    {
-                                        StreamWriter f = File.CreateText(stmt.Filename);
-                                        f.Write(stmt.Arg1);
-                                        f.Flush();
-                                        f.Close();
-                                    }
+                                case DirectoryStatementType.ForceCreate:
                                     break;
-                                case FileStatementType.Append:
-                                    if (File.Exists(stmt.Filename))
-                                    {
-                                        StreamWriter f = new StreamWriter(stmt.Filename, true);
-                                        f.Write(stmt.Arg1);
-                                        f.Flush();
-                                        f.Close();
-                                    }
-                                    else
-                                    {
-                                        ErrorManager.Error(95, Processor.file, stmt.Filename);
-                                        return;
-                                    }
+                                case DirectoryStatementType.TryCreate:
                                     break;
-                                case FileStatementType.CreateOrAppend:
-                                    if (File.Exists(stmt.Filename))
-                                    {
-                                        StreamWriter f = new StreamWriter(stmt.Filename, true);
-                                        f.Write(stmt.Arg1);
-                                        f.Flush();
-                                        f.Close();
-                                    }
-                                    else
-                                    {
-                                        StreamWriter f = File.CreateText(stmt.Filename);
-                                        f.Write(stmt.Arg1);
-                                        f.Flush();
-                                        f.Close();
-                                    }
+
+                                case DirectoryStatementType.Delete:
                                     break;
-                                case FileStatementType.Delete:
-                                    if (File.Exists(stmt.Filename))
-                                    {
-                                        File.Delete(stmt.Filename);
-                                    }
-                                    else
-                                    {
-                                        ErrorManager.Error(94, Processor.file, stmt.Filename);
-                                    }
+                                case DirectoryStatementType.TryDelete:
                                     break;
-                                case FileStatementType.TryDelete:
-                                    if (File.Exists(stmt.Filename))
-                                    {
-                                        File.Delete(stmt.Filename);
-                                    }
+
+                                case DirectoryStatementType.Copy:
                                     break;
-                                case FileStatementType.Copy:
-                                    if (File.Exists(stmt.Filename))
-                                    {
-                                        if (File.Exists(stmt.Arg1))
-                                        {
-                                            ErrorManager.Error(94, Processor.file, stmt.Arg1);
-                                            return;
-                                        }
-                                        File.Copy(stmt.Filename, stmt.Arg1);
-                                    }
-                                    else
-                                    {
-                                        ErrorManager.Error(94, Processor.file, stmt.Filename);
-                                        return;
-                                    }
+                                case DirectoryStatementType.ForceCopy:
                                     break;
-                                case FileStatementType.ForceCopy:
-                                    if (File.Exists(stmt.Filename))
-                                    {
-                                        File.Copy(stmt.Filename, stmt.Arg1, true);
-                                    }
-                                    else
-                                    {
-                                        ErrorManager.Error(94, Processor.file, stmt.Filename);
-                                        return;
-                                    }
+                                case DirectoryStatementType.TryCopy:
                                     break;
+
+                                case DirectoryStatementType.Move:
+                                    break;
+                                case DirectoryStatementType.ForceMove:
+                                    break;
+                                case DirectoryStatementType.TryMove:
+                                    break;
+
+                                case DirectoryStatementType.Rename:
+                                    break;
+                                case DirectoryStatementType.ForceRename:
+                                    break;
+                                case DirectoryStatementType.TryRename:
+                                    break;
+
                                 default:
                                     throw new Exception("Well, an error definately occurred, because this shouldn't ever be getting called.");
                             }
+                            #endregion
+                            break;
+
+                        case StatementType.File:
+                            #region File Statement
+                            FileStatement fst = (FileStatement)statmnt;
+                            fst.Filename = DecomposeString(fst.Filename, platform, target);
+                            fst.Arg1 = DecomposeString(fst.Arg1, platform, target);
+#if NO_EXECUTE
+                            CConsole.WriteLine("Statment type: " + fst.Type.ToString() + " Filename: '" + fst.Filename + "' Arg1: '" + fst.Arg1 + "' Arg2: '" + (fst.Arg2 ?? "null").ToString() + "'");
+#else
+                            switch (fst.Type)
+                            {
+                                case FileStatementType.Create:
+                                    #region Create
+                                    if (File.Exists(fst.Filename))
+                                    {
+                                        ErrorManager.Error(94, Processor.file, fst.Filename);
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        StreamWriter f = File.CreateText(fst.Filename);
+                                        f.Write(DecomposeString(fst.Arg1, platform, target));
+                                        f.Flush();
+                                        f.Close();
+                                        CConsole.WriteLine("Created '" + fst.Filename + "'");
+                                    }
+                                    break;
+                                    #endregion
+
+                                case FileStatementType.Append:
+                                    #region Append
+                                    if (File.Exists(fst.Filename))
+                                    {
+                                        StreamWriter f = new StreamWriter(fst.Filename, true);
+                                        f.Write(DecomposeString(fst.Arg1, platform, target));
+                                        f.Flush();
+                                        f.Close();
+                                        CConsole.WriteLine("Appended to '" + fst.Filename + "'");
+                                    }
+                                    else
+                                    {
+                                        ErrorManager.Error(95, Processor.file, fst.Filename);
+                                        return;
+                                    }
+                                    break;
+                                    #endregion
+
+                                case FileStatementType.CreateOrTruncate:
+                                    #region Create or Truncate
+                                    if (File.Exists(fst.Filename))
+                                    {
+                                        StreamWriter f = new StreamWriter(fst.Filename);
+                                        f.BaseStream.Position = 0;
+                                        f.BaseStream.SetLength(0);
+                                        f.Write(DecomposeString(fst.Arg1, platform, target));
+                                        f.Flush();
+                                        f.Close();
+                                        CConsole.WriteLine("Truncated '" + fst.Filename + "'");
+                                    }
+                                    else
+                                    {
+                                        StreamWriter f = File.CreateText(fst.Filename);
+                                        f.Write(DecomposeString(fst.Arg1, platform, target));
+                                        f.Flush();
+                                        f.Close();
+                                        CConsole.WriteLine("Created '" + fst.Filename + "'");
+                                    }
+                                    break;
+                                    #endregion
+
+                                case FileStatementType.CreateOrAppend:
+                                    #region Create or Append
+                                    if (File.Exists(fst.Filename))
+                                    {
+                                        StreamWriter f = new StreamWriter(fst.Filename, true);
+                                        f.Write(DecomposeString(fst.Arg1, platform, target));
+                                        f.Flush();
+                                        f.Close();
+                                        CConsole.WriteLine("Appended to '" + fst.Filename + "'");
+                                    }
+                                    else
+                                    {
+                                        StreamWriter f = File.CreateText(fst.Filename);
+                                        f.Write(DecomposeString(fst.Arg1, platform, target));
+                                        f.Flush();
+                                        f.Close();
+                                        CConsole.WriteLine("Created '" + fst.Filename + "'");
+                                    }
+                                    break;
+                                    #endregion
+
+                                case FileStatementType.Delete:
+                                    #region Delete
+                                    if (File.Exists(fst.Filename))
+                                    {
+                                        File.Delete(fst.Filename);
+                                        CConsole.WriteLine("File deleted '" + fst.Filename + "'");
+                                    }
+                                    else
+                                    {
+                                        ErrorManager.Error(94, Processor.file, fst.Filename);
+                                    }
+                                    break;
+                                    #endregion
+
+                                case FileStatementType.Copy:
+                                    #region Copy
+                                    if (File.Exists(fst.Filename))
+                                    {
+                                        if (File.Exists(fst.Arg1))
+                                        {
+                                            ErrorManager.Error(94, Processor.file, fst.Arg1);
+                                            return;
+                                        }
+                                        File.Copy(fst.Filename, fst.Arg1);
+                                        CConsole.WriteLine("File copied from '" + fst.Filename + "' to '" + fst.Arg1 + "'");
+                                    }
+                                    else
+                                    {
+                                        ErrorManager.Error(94, Processor.file, fst.Filename);
+                                        return;
+                                    }
+                                    break;
+                                    #endregion
+
+                                case FileStatementType.Rename:
+                                    #region Rename
+                                    if (File.Exists(fst.Filename))
+                                    {
+                                        if (File.Exists(fst.Arg1))
+                                        {
+                                            ErrorManager.Error(94, Processor.file, fst.Arg1);
+                                            return;
+                                        }
+                                        File.Move(fst.Filename, fst.Arg1);
+                                        CConsole.WriteLine("File renamed from '" + fst.Filename + "' to '" + fst.Arg1 + "'");
+                                    }
+                                    else
+                                    {
+                                        ErrorManager.Error(94, Processor.file, fst.Filename);
+                                        return;
+                                    }
+                                    break;
+                                    #endregion
+
+                                case FileStatementType.Move:
+                                    #region Move
+                                    if (File.Exists(fst.Filename))
+                                    {
+                                        if (File.Exists(fst.Arg1))
+                                        {
+                                            ErrorManager.Error(94, Processor.file, fst.Arg1);
+                                            return;
+                                        }
+                                        File.Move(fst.Filename, fst.Arg1);
+                                        CConsole.WriteLine("File moved from '" + fst.Filename + "' to '" + fst.Arg1 + "'");
+                                    }
+                                    else
+                                    {
+                                        ErrorManager.Error(94, Processor.file, fst.Filename);
+                                        return;
+                                    }
+                                    break;
+                                    #endregion
+
+                                case FileStatementType.TryCopy:
+                                    #region Try Copy
+                                    if (File.Exists(fst.Filename))
+                                    {
+                                        if (!File.Exists(fst.Arg1))
+                                        {
+                                            File.Copy(fst.Filename, fst.Arg1);
+                                            CConsole.WriteLine("File copied from '" + fst.Filename + "' to '" + fst.Arg1 + "' (Try)");
+                                        }
+                                        else
+                                        {
+                                            CConsole.WriteLine("File not copied from '" + fst.Filename + "' to '" + fst.Arg1 + "' because destination file already exists. (Try)");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        CConsole.WriteLine("File not copied from '" + fst.Filename + "' to '" + fst.Arg1 + "' because source file doesn't exist. (Try)");
+                                    }
+                                    break;
+                                    #endregion
+
+                                case FileStatementType.TryDelete:
+                                    #region Try Delete
+                                    if (File.Exists(fst.Filename))
+                                    {
+                                        File.Delete(fst.Filename);
+                                        CConsole.WriteLine("File deleted '" + fst.Filename + "' (Try)");
+                                    }
+                                    else
+                                    {
+                                        CConsole.WriteLine("File not deleted '" + fst.Filename + "' because source file doesn't exist. (Try)");
+                                    }
+                                    break;
+                                    #endregion
+
+                                case FileStatementType.TryMove:
+                                    #region Try Move
+                                    if (File.Exists(fst.Filename))
+                                    {
+                                        if (!File.Exists(fst.Arg1))
+                                        {
+                                            File.Move(fst.Filename, fst.Arg1);
+                                            CConsole.WriteLine("File moved from '" + fst.Filename + "' to '" + fst.Arg1 + "' (Try)");
+                                        }
+                                        else
+                                        {
+                                            CConsole.WriteLine("File not moved from '" + fst.Filename + "' to '" + fst.Arg1 + "' because destination file already exists. (Try)");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        CConsole.WriteLine("File not moved from '" + fst.Filename + "' to '" + fst.Arg1 + "' because source file doesn't exist. (Try)");
+                                    }
+                                    break;
+                                    #endregion
+
+                                case FileStatementType.TryRename:
+                                    #region Try Rename
+                                    if (File.Exists(fst.Filename))
+                                    {
+                                        if (!File.Exists(fst.Arg1))
+                                        {
+                                            File.Move(fst.Filename, fst.Arg1);
+                                            CConsole.WriteLine("File renamed from '" + fst.Filename + "' to '" + fst.Arg1 + "' (Try)");
+                                        }
+                                        else
+                                        {
+                                            CConsole.WriteLine("File not renamed from '" + fst.Filename + "' to '" + fst.Arg1 + "' because destination file already exists. (Try)");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        CConsole.WriteLine("File not renamed from '" + fst.Filename + "' to '" + fst.Arg1 + "' because source file doesn't exist. (Try)");
+                                    }
+                                    break;
+                                    #endregion
+
+                                case FileStatementType.ForceCopy:
+                                    #region Force Copy
+                                    if (File.Exists(fst.Filename))
+                                    {
+                                        File.Copy(fst.Filename, fst.Arg1, true);
+                                        CConsole.WriteLine("File copied from '" + fst.Filename + "' to '" + fst.Arg1 + "' (Force)");
+                                    }
+                                    else
+                                    {
+                                        ErrorManager.Error(94, Processor.file, fst.Filename);
+                                        return;
+                                    }
+                                    break;
+                                    #endregion
+
+                                case FileStatementType.ForceRename:
+                                    #region Force Rename
+                                    if (File.Exists(fst.Filename))
+                                    {
+                                        if (File.Exists(fst.Arg1))
+                                        {
+                                            CConsole.LWriteLine("ForceRename: File '" + fst.Arg1 + "' already exists, so deleting it.");
+                                            File.Delete(fst.Arg1);
+                                        }
+                                        File.Move(fst.Filename, fst.Arg1);
+                                        CConsole.WriteLine("File renamed from '" + fst.Filename + "' to '" + fst.Arg1 + "' (Force)");
+                                    }
+                                    else
+                                    {
+                                        ErrorManager.Error(94, Processor.file, fst.Filename);
+                                        return;
+                                    }
+                                    break;
+                                    #endregion
+
+                                case FileStatementType.ForceMove:
+                                    #region Force Move
+                                    if (File.Exists(fst.Filename))
+                                    {
+                                        if (File.Exists(fst.Arg1))
+                                        {
+                                            CConsole.LWriteLine("ForceMove: File '" + fst.Arg1 + "' already exists, so deleting it.");
+                                            File.Delete(fst.Arg1);
+                                        }
+                                        File.Move(fst.Filename, fst.Arg1);
+                                        CConsole.WriteLine("File moved from '" + fst.Filename + "' to '" + fst.Arg1 + "' (Force)");
+                                    }
+                                    else
+                                    {
+                                        ErrorManager.Error(94, Processor.file, fst.Filename);
+                                        return;
+                                    }
+                                    break;
+                                    #endregion
+
+                                default:
+                                    throw new Exception("Well, an error definately occurred, because this shouldn't ever be getting called.");
+                            }
+#endif
 
                             #endregion
                             break;
 
                         case StatementType.Standard:
                             #region Normal Statement
-                            if (st.Modified)
+                            if (statmnt.Modified)
                             {
-                                string s = st.StatementValue;
+                                string s = statmnt.StatementValue;
                                 if (s.Trim() != "")
                                 {
                                     ProcessStartInfo psi = new ProcessStartInfo(s.Substring(0, s.IndexOf('|')), s.Substring(s.IndexOf('|') + 1).Trim());
@@ -244,31 +470,30 @@ namespace OMake
 #if NO_EXECUTE
                                     Process p = new Process();
                                     p.StartInfo = psi;
-                                    Console.WriteLine("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments);
-                                    Log.WriteLine(string.Format("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments));
+                                    CConsole.WriteLine(String.Format("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments));
 #else
-                            Process p = new Process();
-                            p.StartInfo = psi;
-                            p.OutputDataReceived += new DataReceivedEventHandler(DataRecieved);
-                            p.ErrorDataReceived += new DataReceivedEventHandler(DataRecieved);
-                            Console.WriteLine("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments);
-                            Log.WriteLine(string.Format("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments));
-                            p.Start();
-                            p.BeginOutputReadLine();
-                            p.BeginErrorReadLine();
-                            p.WaitForExit();
-                            if (p.ExitCode != 0)
-                            {
-                                ErrorManager.Error(53, Processor.file, p.ExitCode.ToString());
-                                return;
-                            }
+                                    Process p = new Process();
+                                    p.StartInfo = psi;
+                                    p.OutputDataReceived += new DataReceivedEventHandler(DataRecieved);
+                                    p.ErrorDataReceived += new DataReceivedEventHandler(DataRecieved);
+                                    CConsole.WriteLine(String.Format("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments));
+                                    p.Start();
+                                    p.BeginOutputReadLine();
+                                    p.BeginErrorReadLine();
+                                    p.WaitForExit();
+                                    if (p.ExitCode != 0)
+                                    {
+                                        ErrorManager.Error(53, Processor.file, p.ExitCode.ToString());
+                                        return;
+                                    }
 #endif
                                 }
-                                st.SetCache();
+                                statmnt.SetCache();
                             }
                             else
                             {
-                                Log.WriteLine("Dependancies not modified, so not executing statement '" + st.StatementValue + "'.");
+                                Console.WriteLine("Dependancies not modified, so not executing statement '" + statmnt.StatementValue + "'.");
+                                Log.WriteLine("Dependancies not modified, so not executing statement '" + statmnt.StatementValue + "'.");
                             }
                             #endregion
                             break;
