@@ -60,6 +60,10 @@ namespace OMake
                     {
                         buf = ProcessFile(buf, "all");
                     }
+                    else if (buf.ToLower().Trim().StartsWith("directory"))
+                    {
+                        buf = ProcessDirectory(buf, "all");
+                    }
                     else if (buf.ToLower().Trim().StartsWith("common"))
                     {
                         // We MUST decompose the statements here, 
@@ -97,6 +101,8 @@ namespace OMake
             string filename = "";
             FileStatementType tp;
             string arg1 = "";
+
+            #region Process Type
             if (buf.ToLower().StartsWith("create"))
             {
                 buf = buf.Substring(6).Trim();
@@ -194,6 +200,8 @@ namespace OMake
                 ErrorManager.Error(97, file, buf);
                 return "";
             }
+            #endregion
+
 
             if (!buf.StartsWith("("))
             {
@@ -203,6 +211,7 @@ namespace OMake
             else
             {
                 buf = buf.Substring(1).Trim();
+                #region Check Semantics
                 switch (tp)
                 {
                     case FileStatementType.Append:
@@ -214,6 +223,7 @@ namespace OMake
                             ErrorManager.Error(96, file, ")");
                             return "";
                         }
+                        buf = buf.Substring(0, buf.Length - 1).Trim();
                         break;
 
                     case FileStatementType.Copy:
@@ -232,12 +242,14 @@ namespace OMake
                             ErrorManager.Error(96, file, ");");
                             return "";
                         }
+                        buf = buf.Substring(0, buf.Length - 2).Trim();
                         break;
 
                     default:
                         throw new Exception("Unknown FileStatementType!");
                 }
-                buf = buf.Substring(0, buf.Length - 1).Trim();
+                #endregion
+
                 // Extract the args
                 switch (tp)
                 {
@@ -302,6 +314,195 @@ namespace OMake
 
             }
             return buf;
+        }
+        #endregion
+
+
+        #region Process Directory
+        private string ProcessDirectory(string bfr, string target)
+        {
+            string buf = bfr.Trim().Substring(9).Trim();
+            string DirectoryName = "";
+            DirectoryStatementType tp;
+            string arg1 = "";
+
+            #region Process Type
+            if (buf.ToLower().StartsWith("create"))
+            {
+                buf = buf.Substring(6).Trim();
+                tp = DirectoryStatementType.Create;
+            }
+            else if (buf.ToLower().StartsWith("delete"))
+            {
+                tp = DirectoryStatementType.Delete;
+                buf = buf.Substring(6).Trim();
+            }
+            else if (buf.ToLower().StartsWith("copy"))
+            {
+                tp = DirectoryStatementType.Copy;
+                buf = buf.Substring(4).Trim();
+            }
+            else if (buf.ToLower().StartsWith("try_"))
+            {
+                buf = buf.Substring(4).Trim();
+                if (buf.ToLower().StartsWith("create"))
+                {
+                    tp = DirectoryStatementType.TryCreate;
+                    buf = buf.Substring(6).Trim();
+                }
+                else if (buf.ToLower().StartsWith("delete"))
+                {
+                    tp = DirectoryStatementType.TryDelete;
+                    buf = buf.Substring(6).Trim();
+                }
+                else if (buf.ToLower().StartsWith("copy"))
+                {
+                    tp = DirectoryStatementType.TryCopy;
+                    buf = buf.Substring(4).Trim();
+                }
+                else if (buf.ToLower().StartsWith("move"))
+                {
+                    tp = DirectoryStatementType.TryMove;
+                    buf = buf.Substring(4).Trim();
+                }
+                else if (buf.ToLower().StartsWith("rename"))
+                {
+                    tp = DirectoryStatementType.TryRename;
+                    buf = buf.Substring(6).Trim();
+                }
+                else
+                {
+                    ErrorManager.Error(101, file, buf);
+                    return "";
+                }
+
+            }
+            else if (buf.ToLower().StartsWith("force_"))
+            {
+                buf = buf.Substring(6).Trim();
+                if (buf.ToLower().StartsWith("create"))
+                {
+                    tp = DirectoryStatementType.ForceCreate;
+                    buf = buf.Substring(6).Trim();
+                }
+                else if (buf.ToLower().StartsWith("copy"))
+                {
+                    tp = DirectoryStatementType.ForceCopy;
+                    buf = buf.Substring(4).Trim();
+                }
+                else if (buf.ToLower().StartsWith("move"))
+                {
+                    tp = DirectoryStatementType.ForceMove;
+                    buf = buf.Substring(4).Trim();
+                }
+                else if (buf.ToLower().StartsWith("rename"))
+                {
+                    tp = DirectoryStatementType.ForceRename;
+                    buf = buf.Substring(6).Trim();
+                }
+                else
+                {
+                    ErrorManager.Error(102, file, buf);
+                    return "";
+                }
+            }
+            else
+            {
+                ErrorManager.Error(106, file, buf);
+                return "";
+            }
+            #endregion
+
+
+            if (!buf.StartsWith("("))
+            {
+                ErrorManager.Error(107, file, "(");
+                return "";
+            }
+            else
+            {
+                buf = buf.Substring(1).Trim();
+                #region Check Semantics
+                switch (tp)
+                {
+                    case DirectoryStatementType.Create:
+                    case DirectoryStatementType.Copy:
+                    case DirectoryStatementType.Delete:
+                    case DirectoryStatementType.Move:
+                    case DirectoryStatementType.Rename:
+                    case DirectoryStatementType.TryCopy:
+                    case DirectoryStatementType.TryCreate:
+                    case DirectoryStatementType.TryDelete:
+                    case DirectoryStatementType.TryMove:
+                    case DirectoryStatementType.TryRename:
+                    case DirectoryStatementType.ForceCopy:
+                    case DirectoryStatementType.ForceCreate:
+                    case DirectoryStatementType.ForceMove:
+                    case DirectoryStatementType.ForceRename:
+                        if (!buf.EndsWith(");"))
+                        {
+                            ErrorManager.Error(107, file, ");");
+                            return "";
+                        }
+                        buf = buf.Substring(0, buf.Length - 2).Trim();
+                        break;
+
+                    default:
+                        throw new Exception("Unknown FileStatementType!");
+                }
+                #endregion
+
+                // Extract the args
+                switch (tp)
+                {
+                    // These have an argument, not
+                    // just a filename.
+                    case DirectoryStatementType.Copy:
+                    case DirectoryStatementType.Move:
+                    case DirectoryStatementType.Rename:
+                    case DirectoryStatementType.TryCopy:
+                    case DirectoryStatementType.TryMove:
+                    case DirectoryStatementType.TryRename:
+                    case DirectoryStatementType.ForceCopy:
+                    case DirectoryStatementType.ForceMove:
+                    case DirectoryStatementType.ForceRename:
+                        DirectoryName = buf.Split(',')[0].Trim();
+                        arg1 = buf.Split(',')[1].Trim();
+                        break;
+                    default:
+                        DirectoryName = buf;
+                        break;
+                }
+                Config.Targets[target].Statements.Add(new DirectoryStatement(tp, DirectoryName, arg1));
+            }
+            return buf;
+        }
+        #endregion
+
+        #region Process Define Source - Source Lines
+        private List<FileDependancy> Process_Define_Source_SourceLines(List<string> lines, string target)
+        {
+            List<FileDependancy> FinalSources = new List<FileDependancy>();
+            foreach (string s in lines)
+            {
+                if (s.Contains(":"))
+                {
+                    string flname = s.Split(':')[0].Trim();
+                    string buf = s.Substring(s.IndexOf(':') + 1).Trim();
+                    List<string> dependancies = new List<string>(buf.Split(','));
+                    List<IDependancy> deps = new List<IDependancy>();
+                    foreach (string dp in dependancies)
+                    {
+                        deps.Add(new FileDependancy(dp.Trim(), target));
+                    }
+                    FinalSources.Add(new FileDependancy(flname, "all", deps));
+                }
+                else
+                {
+                    FinalSources.Add(new FileDependancy(s.Trim(), "all"));
+                }
+            }
+            return FinalSources;
         }
         #endregion
 
@@ -396,12 +597,12 @@ namespace OMake
                             }
                             #endregion
 
-                            List<SourceFile> Srces = new List<SourceFile>(Config.ResolveSource("WIN32", "all", SourceListName));
-                            List<SourceFile> Sources = new List<SourceFile>();
+                            List<FileDependancy> Srces = new List<FileDependancy>(Config.ResolveSource("WIN32", "all", SourceListName));
+                            List<FileDependancy> Sources = new List<FileDependancy>();
 
-                            foreach (SourceFile s in Srces)
+                            foreach (FileDependancy s in Srces)
                             {
-                                Sources.Add(new SourceFile(s.File, s.Target, s.Platform, s.Dependancies));
+                                Sources.Add(new FileDependancy(s.File, s.Target, s.Platform, s.Dependancies));
                             }
 
                             if (prefixes != null)
@@ -419,9 +620,9 @@ namespace OMake
 
                             int indxs = 0;
                             // Now we can emit the expanded version.
-                            foreach (SourceFile s in Sources)
+                            foreach (FileDependancy s in Sources)
                             {
-                                List<SourceFile> sr = new List<SourceFile>();
+                                List<IDependancy> sr = new List<IDependancy>();
                                 sr.Add(Srces[indxs]);
                                 Config.Targets["all"].Statements.Add(new Statement(baseCommand + s.File, sr));
                                 indxs++;
@@ -458,447 +659,222 @@ namespace OMake
         #endregion
 
         #region Process Common - Prefix
-        private void ProcessCommon_Prefix(ref string buf, List<string> prefixes, ref List<SourceFile> Sources)
+        private void ProcessCommon_Prefix(ref string buf, List<string> prefixes, ref List<FileDependancy> Sources)
         {
             foreach (string prefix in prefixes)
             {
-                if (BuiltinConstant_Regex.IsMatch(prefix))
+                if (prefix.StartsWith("{"))
                 {
-                    #region We need to replace some constants
-                    if (prefix.StartsWith("{"))
+                    string prefixCommand = prefix.Substring(1, prefix.LastIndexOf(':') - 1).Trim();
+                    prefixCommand = prefixCommand.Substring(0, prefixCommand.LastIndexOf('}'));
+                    buf = prefix.Substring(prefix.LastIndexOf(':') + 1).Trim();
+                    if (buf.ToLower().StartsWith("all"))
                     {
-                        string prefixCommand = prefix.Substring(1, prefix.LastIndexOf(':') - 1).Trim();
-                        prefixCommand = prefixCommand.Substring(0, prefixCommand.LastIndexOf('}'));
-                        buf = prefix.Substring(prefix.LastIndexOf(':') + 1).Trim();
-                        if (buf.ToLower().StartsWith("all"))
+                        #region Process All
+                        foreach (FileDependancy s in Sources)
                         {
-                            #region Process All
-                            foreach (SourceFile s in Sources)
+                            s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, prefixCommand, s.File) + " " + s.File;
+                        }
+                        #endregion
+                    }
+                    else if (buf.ToLower().StartsWith("filename"))
+                    {
+                        #region Process Filename
+                        string TheFilename = ProcessCommon_ExtractFilename(ref buf);
+
+                        foreach (FileDependancy s in Sources)
+                        {
+                            if (s.File.Trim() == TheFilename)
                             {
                                 s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, prefixCommand, s.File) + " " + s.File;
                             }
-                            #endregion
                         }
-                        else if (buf.ToLower().StartsWith("filename"))
-                        {
-                            #region Process Filename
-                            string TheFilename = ProcessCommon_ExtractFilename(ref buf);
+                        #endregion
+                    }
+                    else if (buf.ToLower().StartsWith("wildcard"))
+                    {
+                        #region Process Wildcard
+                        string TheWildcard = ProcessCommon_ExtractWildcard(ref buf);
 
-                            foreach (SourceFile s in Sources)
-                            {
-                                if (s.File.Trim() == TheFilename)
-                                {
-                                    s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, prefixCommand, s.File) + " " + s.File;
-                                }
-                            }
-                            #endregion
-                        }
-                        else if (buf.ToLower().StartsWith("wildcard"))
+                        foreach (FileDependancy s in Sources)
                         {
-                            #region Process Wildcard
-                            string TheWildcard = ProcessCommon_ExtractWildcard(ref buf);
+                            if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.File.Trim()))
+                            {
+                                s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, prefixCommand, s.File) + " " + s.File;
+                            }
+                        }
+                        #endregion
+                    }
+                    else if (buf.ToLower().StartsWith("regex"))
+                    {
+                        #region Process Regex
+                        string TheRegex = ProcessCommon_ExtractRegex(ref buf);
 
-                            foreach (SourceFile s in Sources)
-                            {
-                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.File.Trim()))
-                                {
-                                    s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, prefixCommand, s.File) + " " + s.File;
-                                }
-                            }
-                            #endregion
-                        }
-                        else if (buf.ToLower().StartsWith("regex"))
+                        foreach (FileDependancy s in Sources)
                         {
-                            #region Process Regex
-                            string TheRegex = ProcessCommon_ExtractRegex(ref buf);
-
-                            foreach (SourceFile s in Sources)
+                            if (WildcardEvaluator.IsRegexMatch(TheRegex, s.File.Trim()))
                             {
-                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.File.Trim()))
-                                {
-                                    s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, prefixCommand, s.File) + " " + s.File;
-                                }
+                                s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, prefixCommand, s.File) + " " + s.File;
                             }
-                            #endregion
                         }
-                        else
-                        {
-                            ErrorManager.Error(29, file, buf);
-                        }
+                        #endregion
                     }
                     else
                     {
-                        ErrorManager.Error(28, file, prefix.Substring(0, 1));
+                        ErrorManager.Error(29, file, buf);
                     }
-                    #endregion
                 }
                 else
                 {
-                    #region Don't need to replace any constants
-                    if (prefix.StartsWith("{"))
-                    {
-                        string prefixCommand = prefix.Substring(1, prefix.LastIndexOf(':') - 1).Trim();
-                        prefixCommand = prefixCommand.Substring(0, prefixCommand.LastIndexOf('}'));
-                        buf = prefix.Substring(prefix.LastIndexOf(':') + 1).Trim();
-                        if (buf.ToLower().StartsWith("all"))
-                        {
-                            #region Process All
-                            foreach (SourceFile s in Sources)
-                            {
-                                s.File = prefixCommand + " " + s.File;
-                            }
-                            #endregion
-                        }
-                        else if (buf.ToLower().StartsWith("filename"))
-                        {
-                            #region Process Filename
-                            string TheFilename = ProcessCommon_ExtractFilename(ref buf);
-
-                            foreach (SourceFile s in Sources)
-                            {
-                                if (s.File.Trim() == TheFilename)
-                                {
-                                    s.File = prefixCommand + " " + s.File;
-                                }
-                            }
-                            #endregion
-                        }
-                        else if (buf.ToLower().StartsWith("wildcard"))
-                        {
-                            #region Process Wildcard
-                            string TheWildcard = ProcessCommon_ExtractWildcard(ref buf);
-
-                            foreach (SourceFile s in Sources)
-                            {
-                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.File.Trim()))
-                                {
-                                    s.File = prefixCommand + " " + s.File;
-                                }
-                            }
-                            #endregion
-                        }
-                        else if (buf.ToLower().StartsWith("regex"))
-                        {
-                            #region Process Regex
-                            string TheRegex = ProcessCommon_ExtractRegex(ref buf);
-
-                            foreach (SourceFile s in Sources)
-                            {
-                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.File.Trim()))
-                                {
-                                    s.File = prefixCommand + " " + s.File;
-                                }
-                            }
-                            #endregion
-                        }
-                        else
-                        {
-                            ErrorManager.Error(29, file, buf);
-                        }
-                    }
-                    else
-                    {
-                        ErrorManager.Error(28, file, prefix.Substring(0, 1));
-                    }
-                    #endregion
+                    ErrorManager.Error(28, file, prefix.Substring(0, 1));
                 }
             }
         }
         #endregion
 
         #region Process Common - Filename
-        private void ProcessCommon_Filename(ref string buf, List<string> filenames, ref List<SourceFile> Sources)
+        private void ProcessCommon_Filename(ref string buf, List<string> filenames, ref List<FileDependancy> Sources)
         {
             foreach (string filename in filenames)
             {
-                if (BuiltinConstant_Regex.IsMatch(filename))
+                if (filename.StartsWith("{"))
                 {
-                    #region We need to replace some constants
-                    if (filename.StartsWith("{"))
+                    string filenameCommand = filename.Substring(1, filename.LastIndexOf(':') - 1).Trim();
+                    filenameCommand = filenameCommand.Substring(0, filenameCommand.LastIndexOf('}'));
+                    buf = filename.Substring(filename.LastIndexOf(':') + 1).Trim();
+                    if (buf.ToLower().StartsWith("all"))
                     {
-                        string filenameCommand = filename.Substring(1, filename.LastIndexOf(':') - 1).Trim();
-                        filenameCommand = filenameCommand.Substring(0, filenameCommand.LastIndexOf('}'));
-                        buf = filename.Substring(filename.LastIndexOf(':') + 1).Trim();
-                        if (buf.ToLower().StartsWith("all"))
+                        #region Process All
+                        foreach (FileDependancy s in Sources)
                         {
-                            #region Process All
-                            foreach (SourceFile s in Sources)
+                            s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, filenameCommand, s.File);
+                        }
+                        #endregion
+                    }
+                    else if (buf.ToLower().StartsWith("filename"))
+                    {
+                        #region Process Filename
+                        string TheFilename = ProcessCommon_ExtractFilename(ref buf);
+
+                        foreach (FileDependancy s in Sources)
+                        {
+                            if (s.File.Trim() == TheFilename)
                             {
                                 s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, filenameCommand, s.File);
                             }
-                            #endregion
                         }
-                        else if (buf.ToLower().StartsWith("filename"))
-                        {
-                            #region Process Filename
-                            string TheFilename = ProcessCommon_ExtractFilename(ref buf);
+                        #endregion
+                    }
+                    else if (buf.ToLower().StartsWith("wildcard"))
+                    {
+                        #region Process Wildcard
+                        string TheWildcard = ProcessCommon_ExtractWildcard(ref buf);
 
-                            foreach (SourceFile s in Sources)
-                            {
-                                if (s.File.Trim() == TheFilename)
-                                {
-                                    s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, filenameCommand, s.File);
-                                }
-                            }
-                            #endregion
-                        }
-                        else if (buf.ToLower().StartsWith("wildcard"))
+                        foreach (FileDependancy s in Sources)
                         {
-                            #region Process Wildcard
-                            string TheWildcard = ProcessCommon_ExtractWildcard(ref buf);
+                            if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.File.Trim()))
+                            {
+                                s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, filenameCommand, s.File);
+                            }
+                        }
+                        #endregion
+                    }
+                    else if (buf.ToLower().StartsWith("regex"))
+                    {
+                        #region Process Regex
+                        string TheRegex = ProcessCommon_ExtractRegex(ref buf);
 
-                            foreach (SourceFile s in Sources)
-                            {
-                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.File.Trim()))
-                                {
-                                    s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, filenameCommand, s.File);
-                                }
-                            }
-                            #endregion
-                        }
-                        else if (buf.ToLower().StartsWith("regex"))
+                        foreach (FileDependancy s in Sources)
                         {
-                            #region Process Regex
-                            string TheRegex = ProcessCommon_ExtractRegex(ref buf);
-
-                            foreach (SourceFile s in Sources)
+                            if (WildcardEvaluator.IsRegexMatch(TheRegex, s.File.Trim()))
                             {
-                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.File.Trim()))
-                                {
-                                    s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, filenameCommand, s.File);
-                                }
+                                s.File = ProcessCommon_ProcessBuiltinConstant(ref buf, filenameCommand, s.File);
                             }
-                            #endregion
                         }
-                        else
-                        {
-                            ErrorManager.Error(37, file, buf);
-                        }
+                        #endregion
                     }
                     else
                     {
-                        ErrorManager.Error(36, file, filename.Substring(0, 1));
+                        ErrorManager.Error(37, file, buf);
                     }
-                    #endregion
                 }
                 else
                 {
-                    #region Don't need to replace any constants
-                    if (filename.StartsWith("{"))
-                    {
-                        string filenameCommand = filename.Substring(1, filename.LastIndexOf(':') - 1).Trim();
-                        filenameCommand = filenameCommand.Substring(0, filenameCommand.LastIndexOf('}'));
-                        buf = filename.Substring(filename.LastIndexOf(':') + 1).Trim();
-                        if (buf.ToLower().StartsWith("all"))
-                        {
-                            #region Process All
-                            foreach (SourceFile s in Sources)
-                            {
-                                s.File = filenameCommand;
-                            }
-                            #endregion
-                        }
-                        else if (buf.ToLower().StartsWith("filename"))
-                        {
-                            #region Process Filename
-                            string TheFilename = ProcessCommon_ExtractFilename(ref buf);
-
-                            foreach (SourceFile s in Sources)
-                            {
-                                if (s.File.Trim() == TheFilename)
-                                {
-                                    s.File = filenameCommand;
-                                }
-                            }
-                            #endregion
-                        }
-                        else if (buf.ToLower().StartsWith("wildcard"))
-                        {
-                            #region Process Wildcard
-                            string TheWildcard = ProcessCommon_ExtractWildcard(ref buf);
-
-                            foreach (SourceFile s in Sources)
-                            {
-                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.File.Trim()))
-                                {
-                                    s.File = filenameCommand;
-                                }
-                            }
-                            #endregion
-                        }
-                        else if (buf.ToLower().StartsWith("regex"))
-                        {
-                            #region Process Regex
-                            string TheRegex = ProcessCommon_ExtractRegex(ref buf);
-
-                            foreach (SourceFile s in Sources)
-                            {
-                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.File.Trim()))
-                                {
-                                    s.File = filenameCommand;
-                                }
-                            }
-                            #endregion
-                        }
-                        else
-                        {
-                            ErrorManager.Error(37, file, buf);
-                        }
-                    }
-                    else
-                    {
-                        ErrorManager.Error(36, file, filename.Substring(0, 1));
-                    }
-                    #endregion
+                    ErrorManager.Error(36, file, filename.Substring(0, 1));
                 }
             }
         }
         #endregion
 
         #region Process Common - Suffix
-        private void ProcessCommon_Suffix(ref string buf, List<string> suffixes, ref List<SourceFile> Sources)
+        private void ProcessCommon_Suffix(ref string buf, List<string> suffixes, ref List<FileDependancy> Sources)
         {
             foreach (string suffix in suffixes)
             {
-                if (BuiltinConstant_Regex.IsMatch(suffix))
+                if (suffix.StartsWith("{"))
                 {
-                    #region We need to replace some constants
-                    if (suffix.StartsWith("{"))
+                    string suffixCommand = suffix.Substring(1, suffix.LastIndexOf(':') - 1).Trim();
+                    suffixCommand = suffixCommand.Substring(0, suffixCommand.LastIndexOf('}'));
+                    buf = suffix.Substring(suffix.LastIndexOf(':') + 1).Trim();
+                    if (buf.ToLower().StartsWith("all"))
                     {
-                        string suffixCommand = suffix.Substring(1, suffix.LastIndexOf(':') - 1).Trim();
-                        suffixCommand = suffixCommand.Substring(0, suffixCommand.LastIndexOf('}'));
-                        buf = suffix.Substring(suffix.LastIndexOf(':') + 1).Trim();
-                        if (buf.ToLower().StartsWith("all"))
+                        #region Process All
+                        foreach (FileDependancy s in Sources)
                         {
-                            #region Process All
-                            foreach (SourceFile s in Sources)
+                            s.File = s.File + " " + ProcessCommon_ProcessBuiltinConstant(ref buf, suffixCommand, s.File);
+                        }
+                        #endregion
+                    }
+                    else if (buf.ToLower().StartsWith("filename"))
+                    {
+                        #region Process Filename
+                        string TheFilename = ProcessCommon_ExtractFilename(ref buf);
+
+                        foreach (FileDependancy s in Sources)
+                        {
+                            if (s.File.Trim() == TheFilename)
                             {
                                 s.File = s.File + " " + ProcessCommon_ProcessBuiltinConstant(ref buf, suffixCommand, s.File);
                             }
-                            #endregion
                         }
-                        else if (buf.ToLower().StartsWith("filename"))
-                        {
-                            #region Process Filename
-                            string TheFilename = ProcessCommon_ExtractFilename(ref buf);
+                        #endregion
+                    }
+                    else if (buf.ToLower().StartsWith("wildcard"))
+                    {
+                        #region Process Wildcard
+                        string TheWildcard = ProcessCommon_ExtractWildcard(ref buf);
 
-                            foreach (SourceFile s in Sources)
-                            {
-                                if (s.File.Trim() == TheFilename)
-                                {
-                                    s.File = s.File + " " + ProcessCommon_ProcessBuiltinConstant(ref buf, suffixCommand, s.File);
-                                }
-                            }
-                            #endregion
-                        }
-                        else if (buf.ToLower().StartsWith("wildcard"))
+                        foreach (FileDependancy s in Sources)
                         {
-                            #region Process Wildcard
-                            string TheWildcard = ProcessCommon_ExtractWildcard(ref buf);
+                            if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.File.Trim()))
+                            {
+                                s.File = s.File + " " + ProcessCommon_ProcessBuiltinConstant(ref buf, suffixCommand, s.File);
+                            }
+                        }
+                        #endregion
+                    }
+                    else if (buf.ToLower().StartsWith("regex"))
+                    {
+                        #region Process Regex
+                        string TheRegex = ProcessCommon_ExtractRegex(ref buf);
 
-                            foreach (SourceFile s in Sources)
-                            {
-                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.File.Trim()))
-                                {
-                                    s.File = s.File + " " + ProcessCommon_ProcessBuiltinConstant(ref buf, suffixCommand, s.File);
-                                }
-                            }
-                            #endregion
-                        }
-                        else if (buf.ToLower().StartsWith("regex"))
+                        foreach (FileDependancy s in Sources)
                         {
-                            #region Process Regex
-                            string TheRegex = ProcessCommon_ExtractRegex(ref buf);
-
-                            foreach (SourceFile s in Sources)
+                            if (WildcardEvaluator.IsRegexMatch(TheRegex, s.File.Trim()))
                             {
-                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.File.Trim()))
-                                {
-                                    s.File = s.File + " " + ProcessCommon_ProcessBuiltinConstant(ref buf, suffixCommand, s.File);
-                                }
+                                s.File = s.File + " " + ProcessCommon_ProcessBuiltinConstant(ref buf, suffixCommand, s.File);
                             }
-                            #endregion
                         }
-                        else
-                        {
-                            ErrorManager.Error(38, file, buf);
-                        }
+                        #endregion
                     }
                     else
                     {
-                        ErrorManager.Error(39, file, suffix.Substring(0, 1));
+                        ErrorManager.Error(38, file, buf);
                     }
-                    #endregion
                 }
                 else
                 {
-                    #region Don't need to replace any constants
-                    if (suffix.StartsWith("{"))
-                    {
-                        string filenameCommand = suffix.Substring(1, suffix.LastIndexOf(':') - 1).Trim();
-                        filenameCommand = filenameCommand.Substring(0, filenameCommand.LastIndexOf('}'));
-                        buf = suffix.Substring(suffix.LastIndexOf(':') + 1).Trim();
-                        if (buf.ToLower().StartsWith("all"))
-                        {
-                            #region Process All
-                            foreach (SourceFile s in Sources)
-                            {
-                                s.File = s.File + " " + filenameCommand;
-                            }
-                            #endregion
-                        }
-                        else if (buf.ToLower().StartsWith("filename"))
-                        {
-                            #region Process Filename
-                            string TheFilename = ProcessCommon_ExtractFilename(ref buf);
-
-                            foreach (SourceFile s in Sources)
-                            {
-                                if (s.File.Trim() == TheFilename)
-                                {
-                                    s.File = s.File + " " + filenameCommand;
-                                }
-                            }
-                            #endregion
-                        }
-                        else if (buf.ToLower().StartsWith("wildcard"))
-                        {
-                            #region Process Wildcard
-                            string TheWildcard = ProcessCommon_ExtractWildcard(ref buf);
-
-                            foreach (SourceFile s in Sources)
-                            {
-                                if (WildcardEvaluator.IsWildcardMatch(TheWildcard, s.File.Trim()))
-                                {
-                                    s.File = s.File + " " + filenameCommand;
-                                }
-                            }
-                            #endregion
-                        }
-                        else if (buf.ToLower().StartsWith("regex"))
-                        {
-                            #region Process Regex
-                            string TheRegex = ProcessCommon_ExtractRegex(ref buf);
-
-                            foreach (SourceFile s in Sources)
-                            {
-                                if (WildcardEvaluator.IsRegexMatch(TheRegex, s.File.Trim()))
-                                {
-                                    s.File = s.File + " " + filenameCommand;
-                                }
-                            }
-                            #endregion
-                        }
-                        else
-                        {
-                            ErrorManager.Error(38, file, buf);
-                        }
-                    }
-                    else
-                    {
-                        ErrorManager.Error(39, file, suffix.Substring(0, 1));
-                    }
-                    #endregion
+                    ErrorManager.Error(39, file, suffix.Substring(0, 1));
                 }
             }
         }
@@ -1012,33 +988,6 @@ namespace OMake
         }
         #endregion
 
-        #endregion
-
-        #region Process Define Source - Source Lines
-        private List<SourceFile> Process_Define_Source_SourceLines(List<string> lines, string target)
-        {
-            List<SourceFile> FinalSources = new List<SourceFile>();
-            foreach (string s in lines)
-            {
-                if (s.Contains(":"))
-                {
-                    string flname = s.Split(':')[0].Trim();
-                    string buf = s.Substring(s.IndexOf(':') + 1).Trim();
-                    List<string> dependancies = new List<string>(buf.Split(','));
-                    List<SourceFile> deps = new List<SourceFile>();
-                    foreach (string dp in dependancies)
-                    {
-                        deps.Add(new SourceFile(dp.Trim(), target));
-                    }
-                    FinalSources.Add(new SourceFile(flname, "all", deps));
-                }
-                else
-                {
-                    FinalSources.Add(new SourceFile(s.Trim(), "all"));
-                }
-            }
-            return FinalSources;
-        }
         #endregion
 
         #region Process Define
@@ -1430,7 +1379,7 @@ namespace OMake
                         {
                             if (buf.Trim() != "")
                             {
-                                if (buf.Trim().ToLower().StartsWith("#define"))
+                                if (buf.ToLower().Trim().StartsWith("#define"))
                                 {
                                     buf = ProcessTarget_Define(buf.Trim(), Target);
                                 }
@@ -1438,11 +1387,15 @@ namespace OMake
                                 {
                                     buf = ProcessFile(buf, Target);
                                 }
+                                else if (buf.ToLower().Trim().StartsWith("directory"))
+                                {
+                                    buf = ProcessDirectory(buf, "all");
+                                }
                                 else if (buf.Trim().StartsWith("//"))
                                 {
                                     // It's a comment and we ignore it.
                                 }
-                                else if (buf.Trim().ToLower().StartsWith("common"))
+                                else if (buf.ToLower().Trim().StartsWith("common"))
                                 {
                                     // We MUST decompose the statements here, 
                                     // otherwise things will get out of order.
@@ -1839,12 +1792,12 @@ namespace OMake
 
 #warning Give correct location when we support platform specific sources.
 
-                            List<SourceFile> Srces = new List<SourceFile>(Config.ResolveSource("WIN32", target, SourceListName));
-                            List<SourceFile> Sources = new List<SourceFile>();
+                            List<FileDependancy> Srces = new List<FileDependancy>(Config.ResolveSource("WIN32", target, SourceListName));
+                            List<FileDependancy> Sources = new List<FileDependancy>();
 
-                            foreach (SourceFile s in Srces)
+                            foreach (FileDependancy s in Srces)
                             {
-                                Sources.Add(new SourceFile(s.File, s.Target, s.Platform, s.Dependancies));
+                                Sources.Add(new FileDependancy(s.File, s.Target, s.Platform, s.Dependancies));
                             }
 
                             if (prefixes != null)
@@ -1863,9 +1816,9 @@ namespace OMake
 
                             int indxs = 0;
                             // Now we can emit the expanded version.
-                            foreach (SourceFile s in Sources)
+                            foreach (FileDependancy s in Sources)
                             {
-                                List<SourceFile> sr = new List<SourceFile>();
+                                List<IDependancy> sr = new List<IDependancy>();
                                 sr.Add(Srces[indxs]);
                                 Config.Targets[target].Statements.Add(new Statement(baseCommand + s.File, sr));
                                 indxs++;
@@ -1874,7 +1827,8 @@ namespace OMake
                             // And now a bit of cleanup
                             expressions = null;
                             Sources = null;
-                            GC.Collect();
+#warning CHECK WHICH MODE IS BEST FOR GIANT MAKEFILES
+                            //GC.Collect(0, GCCollectionMode.Forced);
                         }
                         else
                         {

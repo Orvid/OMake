@@ -33,7 +33,7 @@ namespace OMake
         /// <summary>
         /// The globally registered lists of sources.
         /// </summary>
-        public Dictionary<string, List<SourceFile>> GlobalSources = new Dictionary<string, List<SourceFile>>();
+        public Dictionary<string, List<FileDependancy>> GlobalSources = new Dictionary<string, List<FileDependancy>>();
         /// <summary>
         /// The globally registered constants.
         /// </summary>
@@ -118,7 +118,7 @@ namespace OMake
             }
         }
 
-        public List<SourceFile> ResolveSource(string platform, string target, string srcName)
+        public List<FileDependancy> ResolveSource(string platform, string target, string srcName)
         {
             if (!Targets.ContainsKey(target))
             {

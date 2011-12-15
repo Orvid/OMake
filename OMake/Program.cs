@@ -18,6 +18,7 @@ namespace OMake
             string filename = "";
             string platform = "";
             List<string> targets = new List<string>();
+            
 
             t.Start();
             #region Load Makefile

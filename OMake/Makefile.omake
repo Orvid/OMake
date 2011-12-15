@@ -92,13 +92,18 @@
 //    return "Huzzah! It works! Btw, the input string was '" + inString + "'.";
 //}
 
-file CREATE_OR_TRUNCATE(ASimpleTestFile.txt)
+directory TRY_DELETE(TestDir1);
+directory TRY_DELETE(TestDir2);
+
+directory CREATE(TestDir1);
+file CREATE_OR_TRUNCATE(TestDir1/TestFile1.txt)
 {
     Well, creating with trimming enabled works just fine.
     Also, LD_ARGS is '${LD_ARGS}'
 }
+directory COPY(TestDir1, TestDir2);
 
-file APPEND(ASimpleTestFile.txt)
+file APPEND(TestDir2/TestFile1.txt)
 {
     Well, this means the appending with trimming enabled works just fine.
 }

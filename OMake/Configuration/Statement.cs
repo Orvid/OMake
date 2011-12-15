@@ -16,7 +16,7 @@ namespace OMake
         /// <summary>
         /// A list of dependancies.
         /// </summary>
-        public List<SourceFile> Dependancies;
+        public List<IDependancy> Dependancies;
         /// <summary>
         /// The type of statement this actually is.
         /// </summary>
@@ -30,7 +30,7 @@ namespace OMake
         public Statement(string value)
         {
             this.StatementValue = value;
-            this.Dependancies = new List<SourceFile>();
+            this.Dependancies = new List<IDependancy>();
         }
 
         /// <summary>
@@ -40,10 +40,10 @@ namespace OMake
         /// <param name="dependancyList">
         /// A list containing the files this statement is dependant upon.
         /// </param>
-        public Statement(string value, List<SourceFile> dependancyList)
+        public Statement(string value, List<IDependancy> dependancyList)
         {
             this.StatementValue = value;
-            this.Dependancies = new List<SourceFile>(dependancyList);
+            this.Dependancies = new List<IDependancy>(dependancyList);
         }
 
         /// <summary>
@@ -52,7 +52,7 @@ namespace OMake
         /// </summary>
         public void SetCache()
         {
-            foreach (SourceFile s in Dependancies)
+            foreach (IDependancy s in Dependancies)
             {
                 s.SetCache();
             }
@@ -68,7 +68,7 @@ namespace OMake
             {
                 if (Dependancies.Count == 0)
                     return true;
-                foreach (SourceFile s in Dependancies)
+                foreach (IDependancy s in Dependancies)
                 {
                     if (s.Modified)
                         return true;

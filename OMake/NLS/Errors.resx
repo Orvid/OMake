@@ -368,4 +368,19 @@
   <data name="00102" xml:space="preserve">
     <value>Unknown Force statement type '{0}'!</value>
   </data>
+  <data name="00103" xml:space="preserve">
+    <value>Directory '{0}' already exists!</value>
+  </data>
+  <data name="00104" xml:space="preserve">
+    <value>Cannot delete directory '{0}' because it doesn't exist!</value>
+  </data>
+  <data name="00105" xml:space="preserve">
+    <value>Source directory '{0}' does not exist!</value>
+  </data>
+  <data name="00106" xml:space="preserve">
+    <value>Unknown directory statement type '{0}'!</value>
+  </data>
+  <data name="00107" xml:space="preserve">
+    <value>Syntax error while declaring directory statement! Expected '{0}'!</value>
+  </data>
 </root>

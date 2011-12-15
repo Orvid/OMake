@@ -34,6 +34,7 @@ namespace OMake
         public static void WriteLine(string s)
         {
             logFile.WriteLine(s);
+            logFile.Flush();
         }
 
         /// <summary>

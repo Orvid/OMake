@@ -20,7 +20,7 @@ namespace OMake
         /// <summary>
         /// Source overrides for this platform.
         /// </summary>
-        public Dictionary<string, List<SourceFile>> Sources = new Dictionary<string, List<SourceFile>>();
+        public Dictionary<string, List<FileDependancy>> Sources = new Dictionary<string, List<FileDependancy>>();
         /// <summary>
         /// Dependancy list overrides for this platform.
         /// </summary>

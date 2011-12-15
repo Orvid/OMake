@@ -68,7 +68,7 @@ namespace OMake
         /// <param name="fileName">The filename of this statement.</param>
         /// <param name="arg1">The first argument for this statement.</param>
         /// <param name="deps">The list of dependancies for this statement.</param>
-        public FileStatement(FileStatementType type, string fileName, string arg1, List<SourceFile> deps) : base("", deps)
+        public FileStatement(FileStatementType type, string fileName, string arg1, List<IDependancy> deps) : base("", deps)
         {
             this.Type = type;
             this.Filename = fileName;
@@ -84,7 +84,7 @@ namespace OMake
         /// <param name="arg1">The first argument for this statement.</param>
         /// <param name="arg2">The second argument for this statement.</param>
         /// <param name="deps">The list of dependancies for this statement.</param>
-        public FileStatement(FileStatementType type, string fileName, string arg1, object arg2, List<SourceFile> deps) : this(type, fileName, arg1, deps)
+        public FileStatement(FileStatementType type, string fileName, string arg1, object arg2, List<IDependancy> deps) : this(type, fileName, arg1, deps)
         {
             this.Arg2 = arg2;
         }

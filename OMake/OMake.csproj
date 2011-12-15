@@ -39,6 +39,9 @@
   <ItemGroup>
     <Compile Include="CConsole.cs" />
     <Compile Include="Configuration\Configuration.cs" />
+    <Compile Include="Configuration\Dependancies\DirectoryDependancy.cs" />
+    <Compile Include="Configuration\Dependancies\FileDependancy.cs" />
+    <Compile Include="Configuration\Dependancies\IDependancy.cs" />
     <Compile Include="Configuration\DirectoryStatement.cs" />
     <Compile Include="Configuration\DirectoryStatementType.cs" />
     <Compile Include="Configuration\FileStatement.cs" />

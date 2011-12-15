@@ -68,7 +68,7 @@ namespace OMake
         /// <param name="directoryName">The DirectoryName of this statement.</param>
         /// <param name="arg1">The first argument for this statement.</param>
         /// <param name="deps">The list of dependancies for this statement.</param>
-        public DirectoryStatement(DirectoryStatementType type, string directoryName, string arg1, List<SourceFile> deps) : base("", deps)
+        public DirectoryStatement(DirectoryStatementType type, string directoryName, string arg1, List<IDependancy> deps) : base("", deps)
         {
             this.Type = type;
             this.DirectoryName = directoryName;
@@ -84,7 +84,7 @@ namespace OMake
         /// <param name="arg1">The first argument for this statement.</param>
         /// <param name="arg2">The second argument for this statement.</param>
         /// <param name="deps">The list of dependancies for this statement.</param>
-        public DirectoryStatement(DirectoryStatementType type, string directoryName, string arg1, object arg2, List<SourceFile> deps) : this(type, directoryName, arg1, deps)
+        public DirectoryStatement(DirectoryStatementType type, string directoryName, string arg1, object arg2, List<IDependancy> deps) : this(type, directoryName, arg1, deps)
         {
             this.Arg2 = arg2;
         }

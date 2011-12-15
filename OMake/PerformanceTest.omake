@@ -63,6 +63,8 @@
 // constant, followed by each file in the GCC_C_FILES
 // source collection, prefixed by the expression
 // that we add before each file.
+#define TARGET(all)
+{
 common TOOL(GCC ${GCC_ARGS}) : GCC_C_FILES
 {
     #prefix{./Object/$(FILENAME.NO_EXTENSION.DIR_TO_FILENAME).o} : ALL
@@ -49997,6 +49999,7 @@ common TOOL(GCC ${GCC_ARGS}) : GCC_C_FILES
     #prefix{./Object/$(FILENAME.NO_EXTENSION.DIR_TO_FILENAME).o} : ALL
 }
 
+}
 
 // The following just remains as an example of how you 
 // can explicitly call a tool.

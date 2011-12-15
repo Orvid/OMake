@@ -33,7 +33,7 @@ namespace OMake
         /// <summary>
         /// The lists of sources specific to the target.
         /// </summary>
-        public Dictionary<string, List<SourceFile>> TargetSources = new Dictionary<string, List<SourceFile>>();
+        public Dictionary<string, List<FileDependancy>> TargetSources = new Dictionary<string, List<FileDependancy>>();
         /// <summary>
         /// The constants specific to the target.
         /// </summary>
