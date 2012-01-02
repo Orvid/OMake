@@ -128,6 +128,7 @@ namespace OMake
                             Console.WriteLine("An error occurred when opening the file! '" + args[0] + "'");
                             return;
                         }
+                        filename = "makefile.omake";
                     }
                     else
                     {
