@@ -4,3 +4,7 @@
 /OMake/bin
 /OMake/obj
 /OMake.suo
+
+/OMakeCacheViewer/bin
+/OMakeCacheViewer/obj
+/OMakeCacheViewer/OMakeCacheViewer.sln
