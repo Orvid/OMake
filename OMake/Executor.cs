@@ -97,6 +97,7 @@ namespace OMake
                     Cache.SetValue("Makefile.ConfigCache", m.GetBuffer());
                 }
                 #endregion
+                Cache.Finalize();
 
                 foreach (Statement statmnt in Config.Targets[target].Statements)
                 {

@@ -226,7 +226,6 @@ namespace OMake
             }
             e.Execute(platform, targets);
 
-            Cache.Finalize();
             Log.Cleanup();
             return;
 		}
