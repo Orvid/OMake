@@ -135,7 +135,7 @@ namespace OMake
                     string strupDir = GetString("StartupDirectory");
                     if (strupDir != Directory.GetCurrentDirectory())
                     {
-                        ErrorManager.Warning(92, Processor.file);
+                        ErrorManager.Warning(93, Processor.file);
                         objects = new Dictionary<string, CacheObject>();
                     }
                 }

@@ -15,7 +15,7 @@ namespace OMake
         private static readonly Regex CustomConstant_Regex;
         /// <summary>
         /// This is used to get an inner list out of
-        /// a statement, this must be done AFTER the
+    /// a statement, this must be done AFTER the
         /// processing of the custom constants, otherwise
         /// it will include the constant in the match.
         /// </summary>
@@ -644,37 +644,45 @@ namespace OMake
                                 string s = statmnt.StatementValue;
                                 if (s.Trim() != "")
                                 {
-                                    ProcessStartInfo psi = new ProcessStartInfo(s.Substring(0, s.IndexOf('|')), s.Substring(s.IndexOf('|') + 1).Trim());
-                                    psi.UseShellExecute = false;
-                                    psi.RedirectStandardOutput = true;
-                                    psi.RedirectStandardError = true;
-#if NO_EXECUTE
-                                    Process p = new Process();
-                                    p.StartInfo = psi;
-                                    CConsole.WriteLine(String.Format("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments));
-#else
-                                    Process p = new Process();
-                                    p.StartInfo = psi;
-                                    p.OutputDataReceived += new DataReceivedEventHandler(DataRecieved);
-                                    p.ErrorDataReceived += new DataReceivedEventHandler(DataRecieved);
-                                    CConsole.WriteLine(String.Format("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments));
-                                    p.Start();
-                                    p.BeginOutputReadLine();
-                                    p.BeginErrorReadLine();
-                                    p.WaitForExit();
-                                    if (p.ExitCode != 0)
+                                    try
                                     {
-                                        ErrorManager.Error(53, Processor.file, p.ExitCode.ToString());
+                                        ProcessStartInfo psi = new ProcessStartInfo(s.Substring(0, s.IndexOf('|')), s.Substring(s.IndexOf('|') + 1).Trim());
+                                        psi.UseShellExecute = false;
+                                        psi.RedirectStandardOutput = true;
+                                        psi.RedirectStandardError = true;
+#if NO_EXECUTE
+                                        Process p = new Process();
+                                        p.StartInfo = psi;
+                                        CConsole.WriteLine(String.Format("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments));
+#else
+                                        Process p = new Process();
+                                        p.StartInfo = psi;
+                                        p.OutputDataReceived += new DataReceivedEventHandler(DataRecieved);
+                                        p.ErrorDataReceived += new DataReceivedEventHandler(DataRecieved);
+                                        CConsole.WriteLine(String.Format("{0} {1}", p.StartInfo.FileName, p.StartInfo.Arguments));
+                                        p.Start();
+                                        p.BeginOutputReadLine();
+                                        p.BeginErrorReadLine();
+                                        p.WaitForExit();
+                                        if (p.ExitCode != 0)
+                                        {
+                                            ErrorManager.Error(53, Processor.file, p.ExitCode.ToString());
+                                            return;
+                                        }
+#endif
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        ErrorManager.Error(108, Processor.file, statmnt.StatementValue, e.Message);
                                         return;
                                     }
-#endif
                                 }
                                 statmnt.SetCache();
                             }
                             else
                             {
-                                Console.WriteLine("Dependancies not modified, so not executing statement '" + statmnt.StatementValue + "'.");
-                                Log.WriteLine("Dependancies not modified, so not executing statement '" + statmnt.StatementValue + "'.");
+                                Console.WriteLine("Dependencies not modified, so not executing statement '" + statmnt.StatementValue + "'.");
+                                Log.WriteLine("Dependencies not modified, so not executing statement '" + statmnt.StatementValue + "'.");
                             }
                             #endregion
                             break;
